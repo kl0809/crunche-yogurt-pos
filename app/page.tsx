@@ -195,6 +195,19 @@ export default function Home() {
       setCart([...cart, { ...product, quantity: 1 }]);
     }
   }
+  async function deleteProduct(id: number) {
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    await loadData();
+  }
 
   function decreaseQuantity(productId: number) {
     setCart(
@@ -349,6 +362,13 @@ export default function Home() {
               className="mt-4 bg-white text-black px-4 py-2 rounded-xl"
             >
               Add Order
+            </button>
+            
+            <button
+              onClick={() => deleteProduct(product.id)}
+              className="mt-2 bg-red-500 text-white px-4 py-2 rounded-xl"
+            >
+              Delete
             </button>
           </div>
         ))}
