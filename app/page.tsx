@@ -4,12 +4,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
 
-const products = [
-  { id: 1, name: "Original Yogurt", price: 12, cost: 5 },
-  { id: 2, name: "Mango Yogurt", price: 15, cost: 6 },
-  { id: 3, name: "Strawberry Yogurt", price: 15, cost: 6 },
-];
-
 type PaymentMethod = "Cash" | "DuitNow" | "TNG";
 
 type CartItem = {
@@ -40,6 +34,7 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [expenseName, setExpenseName] = useState("");
@@ -75,6 +70,13 @@ export default function Home() {
   }
 
   async function loadData() {
+    const { data: productsData } = await supabase
+      .from("products")
+      .select("*");
+
+    if (productsData) {
+      setProducts(productsData);
+    }
     const { start, end } = getTodayRange();
 
     const { data: ordersData } = await supabase
