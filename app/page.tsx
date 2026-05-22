@@ -180,6 +180,9 @@ export default function Home() {
   const todayProfit = orders.reduce((sum, order) => sum + order.profit, 0);
   const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
   const netProfit = todayProfit - totalExpenses;
+  function formatMoney(amount: number) {
+    return amount.toFixed(2);
+  }
 
   const productSales: Record<string, number> = {};
 
@@ -328,22 +331,22 @@ export default function Home() {
       <div className="mb-8 grid grid-cols-4 gap-4">
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Today Sales</p>
-          <p className="text-2xl font-bold">RM {todaySales}</p>
+          <p className="text-2xl font-bold">RM {formatMoney(todaySales)}</p>
         </div>
 
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Gross Profit</p>
-          <p className="text-2xl font-bold">RM {todayProfit}</p>
+          <p className="text-2xl font-bold">RM {formatMoney(todayProfit)}</p>
         </div>
 
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Expenses</p>
-          <p className="text-2xl font-bold">RM {totalExpenses}</p>
+          <p className="text-2xl font-bold">RM {formatMoney(totalExpenses)}</p>
         </div>
 
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Net Profit</p>
-          <p className="text-2xl font-bold">RM {netProfit}</p>
+          <p className="text-2xl font-bold">RM {formatMoney(netProfit)}</p>
         </div>
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">
@@ -559,11 +562,11 @@ export default function Home() {
               </p>
 
               <p>
-                Total: RM {order.total}
+                Total: RM {formatMoney(order.total)}
               </p>
 
               <p>
-                Profit: RM {order.profit}
+                Profit: RM {formatMoney(order.profit)}
               </p>
 
               <div className="mt-2">
