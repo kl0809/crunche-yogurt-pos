@@ -337,43 +337,6 @@ export default function Home() {
           </button>
         </div>
       </div>
-      <div className="mb-8 border p-6 rounded-2xl">
-        <h2 className="text-2xl font-bold">
-          Add Product
-        </h2>
-
-        <div className="mt-4 flex gap-4 flex-wrap">
-          <input
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-            placeholder="Product name"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <input
-            value={productPrice}
-            onChange={(e) => setProductPrice(e.target.value)}
-            placeholder="Price"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <input
-            value={productCost}
-            onChange={(e) => setProductCost(e.target.value)}
-            placeholder="Cost"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <button
-            onClick={addProduct}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-          >
-            Add Product
-          </button>
-        </div>
-      </div>
       <div className="grid grid-cols-3 gap-4">
         {products.map((product) => (
           <div key={product.id} className="border p-4 rounded-2xl">
