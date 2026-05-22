@@ -41,6 +41,7 @@ export default function Home() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
 
   const [productName, setProductName] = useState("");
@@ -53,7 +54,7 @@ export default function Home() {
 
   useEffect(() => {
     checkUser();
-  }, []);
+  }, [filter]);
 
   async function checkUser() {
     const { data } = await supabase.auth.getUser();
@@ -67,11 +68,13 @@ export default function Home() {
     loadData();
   }
 
-  function getTodayRange() {
+  function getYesterdayRange() {
     const start = new Date();
+    start.setDate(start.getDate() - 1);
     start.setHours(0, 0, 0, 0);
 
     const end = new Date();
+    end.setDate(end.getDate() - 1);
     end.setHours(23, 59, 59, 999);
 
     return {
@@ -96,21 +99,46 @@ export default function Home() {
         }))
       );
     }
-    const { start, end } = getTodayRange();
+    let start = "";
+    let end = "";
 
-    const { data: ordersData } = await supabase
-      .from("orders")
-      .select("id,total,profit,payment_method,order_items(*)")
-      .gte("created_at", start)
-      .lte("created_at", end)
-      .order("id", { ascending: false });
+    if (filter === "today") {
+      const range = getTodayRange();
+      start = range.start;
+      end = range.end;
+    }
 
-    const { data: expensesData } = await supabase
-      .from("expenses")
-      .select("*")
+    if (filter === "yesterday") {
+      const range = getYesterdayRange();
+      start = range.start;
+      end = range.end;
+    }
+
+  let ordersQuery = supabase
+    .from("orders")
+    .select("id,total,profit,payment_method,created_at,order_items(*)")
+    .order("id", { ascending: false });
+
+  if (filter !== "all") {
+    ordersQuery = ordersQuery
       .gte("created_at", start)
-      .lte("created_at", end)
-      .order("id", { ascending: false });
+      .lte("created_at", end);
+  }
+
+  const { data: ordersData } = await ordersQuery;
+
+  let expensesQuery = supabase
+    .from("expenses")
+    .select("*")
+    .order("id", { ascending: false });
+
+  if (filter !== "all") {
+    expensesQuery = expensesQuery
+      .gte("created_at", start)
+      .lte("created_at", end);
+  }
+
+  const { data: expensesData } = await expensesQuery;
 
     if (ordersData) {
       setOrders(
@@ -327,6 +355,19 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white p-10">
       <h1 className="text-4xl font-bold mb-4">Crunché Yogurt POS 🍦</h1>
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setFilter("today")} className="bg-blue-600 px-4 py-2 rounded-xl">
+          Today
+        </button>
+
+        <button onClick={() => setFilter("yesterday")} className="bg-yellow-600 px-4 py-2 rounded-xl">
+          Yesterday
+        </button>
+
+        <button onClick={() => setFilter("all")} className="bg-gray-600 px-4 py-2 rounded-xl">
+          All Time
+        </button>
+      </div>
 
       <div className="mb-8 grid grid-cols-4 gap-4">
         <div className="border p-4 rounded-2xl">
