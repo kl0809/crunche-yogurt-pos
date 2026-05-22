@@ -54,6 +54,12 @@ export default function Home() {
 
   useEffect(() => {
     checkUser();
+  }, []);
+
+  useEffect(() => {
+    if (!checkingAuth) {
+      loadData();
+    }
   }, [filter]);
 
   async function checkUser() {
