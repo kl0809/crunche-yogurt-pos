@@ -28,14 +28,24 @@ type Expense = {
   amount: number;
 };
 
+type Product = {
+  id: number;
+  name: string;
+  price: number;
+  cost: number;
+};
+
 export default function Home() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
+  const [productName, setProductName] = useState("");
+  const [productPrice, setProductPrice] = useState("");
+  const [productCost, setProductCost] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [expenseName, setExpenseName] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -72,10 +82,18 @@ export default function Home() {
   async function loadData() {
     const { data: productsData } = await supabase
       .from("products")
-      .select("*");
+      .select("*")
+      .order("id", { ascending: true });
 
     if (productsData) {
-      setProducts(productsData);
+      setProducts(
+        productsData.map((product) => ({
+          id: product.id,
+          name: product.name,
+          price: Number(product.price),
+          cost: Number(product.cost),
+        }))
+      );
     }
     const { start, end } = getTodayRange();
 
@@ -121,6 +139,31 @@ export default function Home() {
       );
     }
   }
+    async function addProduct() {
+        const price = Number(productPrice);
+        const cost = Number(productCost);
+
+        if (!productName || price <= 0 || cost < 0) return;
+
+        const { error } = await supabase.from("products").insert([
+          {
+            name: productName,
+            price,
+            cost,
+          },
+        ]);
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        setProductName("");
+        setProductPrice("");
+        setProductCost("");
+
+        await loadData();
+      }
 
   const todaySales = orders.reduce((sum, order) => sum + order.total, 0);
   const todayProfit = orders.reduce((sum, order) => sum + order.profit, 0);
@@ -259,7 +302,41 @@ export default function Home() {
           <p className="text-2xl font-bold">RM {netProfit}</p>
         </div>
       </div>
+      <div className="mb-8 border p-6 rounded-2xl">
+        <h2 className="text-2xl font-bold">Add Product</h2>
 
+        <div className="mt-4 flex gap-4">
+          <input
+            value={productName}
+            onChange={(e) => setProductName(e.target.value)}
+            placeholder="Product name"
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          />
+
+          <input
+            value={productPrice}
+            onChange={(e) => setProductPrice(e.target.value)}
+            placeholder="Price"
+            type="number"
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          />
+
+          <input
+            value={productCost}
+            onChange={(e) => setProductCost(e.target.value)}
+            placeholder="Cost"
+            type="number"
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          />
+
+          <button
+            onClick={addProduct}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+          >
+            Add Product
+          </button>
+        </div>
+      </div>
       <div className="grid grid-cols-3 gap-4">
         {products.map((product) => (
           <div key={product.id} className="border p-4 rounded-2xl">
