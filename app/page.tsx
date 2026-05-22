@@ -181,6 +181,20 @@ export default function Home() {
   const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
   const netProfit = todayProfit - totalExpenses;
 
+  const productSales: Record<string, number> = {};
+
+  orders.forEach((order) => {
+    order.items.forEach((item) => {
+      productSales[item.name] =
+        (productSales[item.name] || 0) + item.quantity;
+    });
+  });
+
+  const bestSeller =
+    Object.entries(productSales).sort(
+      (a, b) => b[1] - a[1]
+    )[0];
+
   const total = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -330,6 +344,17 @@ export default function Home() {
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Net Profit</p>
           <p className="text-2xl font-bold">RM {netProfit}</p>
+        </div>
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">
+            Best Seller
+          </p>
+
+          <h2 className="text-3xl font-bold">
+            {bestSeller
+              ? `${bestSeller[0]} (${bestSeller[1]})`
+              : "No Sales"}
+          </h2>
         </div>
       </div>
       <div className="mb-8 border p-6 rounded-2xl">
