@@ -37,6 +37,21 @@ export default function LoginPage() {
 
     router.push("/");
   }
+    async function resetPassword() {
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
+        redirectTo: "https://crunche-yogurt-pos.vercel.app/update-password",
+      }
+    );
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Password reset email sent!");
+  }
 
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -71,6 +86,14 @@ export default function LoginPage() {
         >
           Create Account
         </button>
+        
+        <button
+          onClick={resetPassword}
+          className="w-full mt-3 bg-yellow-500 text-black px-4 py-2 rounded-xl"
+        >
+          Forgot Password
+        </button>
+
       </div>
     </main>
   );
