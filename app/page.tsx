@@ -46,6 +46,7 @@ export default function Home() {
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productCost, setProductCost] = useState("");
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [expenseName, setExpenseName] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -145,13 +146,22 @@ export default function Home() {
 
         if (!productName || price <= 0 || cost < 0) return;
 
-        const { error } = await supabase.from("products").insert([
-          {
-            name: productName,
-            price,
-            cost,
-          },
-        ]);
+        const { error } = editingProductId
+          ? await supabase
+              .from("products")
+              .update({
+                name: productName,
+                price,
+                cost,
+              })
+              .eq("id", editingProductId)
+          : await supabase.from("products").insert([
+              {
+                name: productName,
+                price,
+                cost,
+              },
+            ]);
 
         if (error) {
           console.error(error);
@@ -161,6 +171,7 @@ export default function Home() {
         setProductName("");
         setProductPrice("");
         setProductCost("");
+        setEditingProductId(null);
 
         await loadData();
       }
@@ -207,6 +218,12 @@ export default function Home() {
     }
 
     await loadData();
+  }
+    function startEditProduct(product: Product) {
+    setEditingProductId(product.id);
+    setProductName(product.name);
+    setProductPrice(String(product.price));
+    setProductCost(String(product.cost));
   }
 
   function decreaseQuantity(productId: number) {
@@ -346,7 +363,7 @@ export default function Home() {
             onClick={addProduct}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
           >
-            Add Product
+            {editingProductId ? "Update Product" : "Add Product"}
           </button>
         </div>
       </div>
@@ -363,7 +380,14 @@ export default function Home() {
             >
               Add Order
             </button>
-            
+
+            <button
+              onClick={() => startEditProduct(product)}
+              className="mt-2 bg-yellow-500 text-black px-4 py-2 rounded-xl"
+            >
+              Edit
+            </button>
+
             <button
               onClick={() => deleteProduct(product.id)}
               className="mt-2 bg-red-500 text-white px-4 py-2 rounded-xl"
