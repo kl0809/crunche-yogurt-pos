@@ -513,22 +513,48 @@ export default function Home() {
           <p className="mt-4 text-gray-400">No orders yet.</p>
         )}
 
-        {orders.map((order, index) => (
-          <div key={order.id} className="mt-4 border-t pt-4">
-            <p className="font-bold">Order #{orders.length - index}</p>
-            <p>Total: RM {order.total}</p>
-            <p>Profit: RM {order.profit}</p>
-            <p>Payment: {order.paymentMethod}</p>
+        <div className="mt-4 space-y-4">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="border p-4 rounded-xl"
+            >
+              <div className="flex justify-between">
+                <h3 className="font-bold">
+                  Order #{order.id}
+                </h3>
 
-            <div className="mt-2">
-              {order.items.map((item) => (
-                <p key={item.id}>
-                  {item.name} × {item.quantity}
+                <p className="text-sm text-gray-400">
+                  {new Date().toLocaleTimeString()}
                 </p>
-              ))}
+              </div>
+
+              <p className="mt-2">
+                Payment: {order.paymentMethod}
+              </p>
+
+              <p>
+                Total: RM {order.total}
+              </p>
+
+              <p>
+                Profit: RM {order.profit}
+              </p>
+
+              <div className="mt-2">
+                <p className="font-semibold">
+                  Items:
+                </p>
+
+                {order.items.map((item, index) => (
+                  <p key={index}>
+                    {item.name} x {item.quantity}
+                  </p>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </main>
   );
