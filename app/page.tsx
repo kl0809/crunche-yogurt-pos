@@ -52,6 +52,8 @@ export default function Home() {
   const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [selectedMaterialId, setSelectedMaterialId] = useState("");
+  const [stockAmount, setStockAmount] = useState("");
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -158,60 +160,60 @@ export default function Home() {
       end = range.end;
     }
 
-  let ordersQuery = supabase
-    .from("orders")
-    .select("id,total,profit,payment_method,created_at,order_items(*)")
-    .order("id", { ascending: false });
+    let ordersQuery = supabase
+      .from("orders")
+      .select("id,total,profit,payment_method,created_at,order_items(*)")
+      .order("id", { ascending: false });
 
-  if (filter !== "all") {
-    ordersQuery = ordersQuery
-      .gte("created_at", start)
-      .lte("created_at", end);
-  }
-
-  const { data: ordersData } = await ordersQuery;
-
-  let expensesQuery = supabase
-    .from("expenses")
-    .select("*")
-    .order("id", { ascending: false });
-
-  if (filter !== "all") {
-    expensesQuery = expensesQuery
-      .gte("created_at", start)
-      .lte("created_at", end);
-  }
-
-  const { data: expensesData } = await expensesQuery;
-
-    if (ordersData) {
-      setOrders(
-        ordersData.map((order: any) => ({
-          id: order.id,
-          total: Number(order.total),
-          profit: Number(order.profit),
-          paymentMethod: order.payment_method,
-          items: order.order_items.map((item: any) => ({
-            id: item.id,
-            name: item.product_name,
-            price: Number(item.price),
-            cost: Number(item.cost),
-            quantity: item.quantity,
-          })),
-        }))
-      );
+    if (filter !== "all") {
+      ordersQuery = ordersQuery
+        .gte("created_at", start)
+        .lte("created_at", end);
     }
 
-    if (expensesData) {
-      setExpenses(
-        expensesData.map((expense: any) => ({
-          id: expense.id,
-          name: expense.name,
-          amount: Number(expense.amount),
-        }))
-      );
+    const { data: ordersData } = await ordersQuery;
+
+    let expensesQuery = supabase
+      .from("expenses")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (filter !== "all") {
+      expensesQuery = expensesQuery
+        .gte("created_at", start)
+        .lte("created_at", end);
     }
-  }
+
+    const { data: expensesData } = await expensesQuery;
+
+      if (ordersData) {
+        setOrders(
+          ordersData.map((order: any) => ({
+            id: order.id,
+            total: Number(order.total),
+            profit: Number(order.profit),
+            paymentMethod: order.payment_method,
+            items: order.order_items.map((item: any) => ({
+              id: item.id,
+              name: item.product_name,
+              price: Number(item.price),
+              cost: Number(item.cost),
+              quantity: item.quantity,
+            })),
+          }))
+        );
+      }
+
+      if (expensesData) {
+        setExpenses(
+          expensesData.map((expense: any) => ({
+            id: expense.id,
+            name: expense.name,
+            amount: Number(expense.amount),
+          }))
+        );
+      }
+    }
     async function addProduct() {
         const price = Number(productPrice);
         const cost = Number(productCost);
@@ -388,6 +390,36 @@ export default function Home() {
     await loadData();
   }
 
+  async function addStock() {
+    const amount = Number(stockAmount);
+    const materialId = Number(selectedMaterialId);
+
+    if (!materialId || amount <= 0) return;
+
+    const material = rawMaterials.find((item) => item.id === materialId);
+
+    if (!material) return;
+
+    const newStock = material.stock_quantity + amount;
+
+    const { error } = await supabase
+      .from("raw_materials")
+      .update({
+        stock_quantity: newStock,
+      })
+      .eq("id", materialId);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setSelectedMaterialId("");
+    setStockAmount("");
+
+    await loadData();
+  }
+
   if (checkingAuth) {
   return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -447,6 +479,36 @@ export default function Home() {
       </div>
       <div className="mb-8 border p-6 rounded-2xl">
   <h2 className="text-2xl font-bold">Inventory</h2>
+  <div className="mt-4 flex gap-4 flex-wrap">
+    <select
+      value={selectedMaterialId}
+      onChange={(e) => setSelectedMaterialId(e.target.value)}
+      className="bg-white text-black px-4 py-2 rounded-xl"
+    >
+      <option value="">Select material</option>
+
+      {rawMaterials.map((material) => (
+        <option key={material.id} value={material.id}>
+          {material.name}
+        </option>
+      ))}
+    </select>
+
+    <input
+      value={stockAmount}
+      onChange={(e) => setStockAmount(e.target.value)}
+      placeholder="Amount to add"
+      type="number"
+      className="bg-white text-black px-4 py-2 rounded-xl"
+    />
+
+    <button
+      onClick={addStock}
+      className="bg-green-600 text-white px-4 py-2 rounded-xl"
+    >
+      Add Stock
+    </button>
+  </div>
 
   <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
       {rawMaterials.map((material) => (
