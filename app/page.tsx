@@ -35,6 +35,14 @@ type Product = {
   cost: number;
 };
 
+type RawMaterial = {
+  id: number;
+  name: string;
+  stock_quantity: number;
+  unit: string;
+  low_stock_alert: number;
+};
+
 export default function Home() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -43,6 +51,7 @@ export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -88,7 +97,7 @@ export default function Home() {
       end: end.toISOString(),
     };
   }
-  
+
     function getTodayRange() {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -115,6 +124,22 @@ export default function Home() {
           name: product.name,
           price: Number(product.price),
           cost: Number(product.cost),
+        }))
+      );
+    }
+    const { data: rawMaterialsData } = await supabase
+      .from("raw_materials")
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (rawMaterialsData) {
+      setRawMaterials(
+        rawMaterialsData.map((material) => ({
+          id: material.id,
+          name: material.name,
+          stock_quantity: Number(material.stock_quantity),
+          unit: material.unit,
+          low_stock_alert: Number(material.low_stock_alert),
         }))
       );
     }
@@ -420,6 +445,25 @@ export default function Home() {
           </h2>
         </div>
       </div>
+      <div className="mb-8 border p-6 rounded-2xl">
+  <h2 className="text-2xl font-bold">Inventory</h2>
+
+  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+      {rawMaterials.map((material) => (
+        <div key={material.id} className="border p-4 rounded-xl">
+          <p className="font-bold">{material.name}</p>
+
+          <p className="text-xl mt-2">
+            {material.stock_quantity} {material.unit}
+          </p>
+
+          {material.stock_quantity <= material.low_stock_alert && (
+            <p className="text-red-400 mt-2">Low stock warning</p>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
       <div className="mb-8 border p-6 rounded-2xl">
         <h2 className="text-2xl font-bold">Add Product</h2>
 
