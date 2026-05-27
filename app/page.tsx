@@ -148,6 +148,9 @@ export default function Home() {
         setSelectedEventId(String(eventsData[0].id));
       }
     }
+    
+    if (!selectedEventId) return;
+    
     const { data: rawMaterialsData } = await supabase
       .from("raw_materials")
       .select("*")
@@ -182,6 +185,7 @@ export default function Home() {
     let ordersQuery = supabase
       .from("orders")
       .select("id,total,profit,payment_method,created_at,order_items(*)")
+      .eq("event_id", Number(selectedEventId))
       .order("id", { ascending: false });
 
     if (filter !== "all") {
@@ -195,6 +199,7 @@ export default function Home() {
     let expensesQuery = supabase
       .from("expenses")
       .select("*")
+      .eq("event_id", Number(selectedEventId))
       .order("id", { ascending: false });
 
     if (filter !== "all") {
@@ -349,7 +354,7 @@ export default function Home() {
   }
 
   async function checkout() {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || !selectedEventId) return;
 
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -358,6 +363,7 @@ export default function Home() {
           total,
           profit,
           payment_method: paymentMethod,
+          event_id: Number(selectedEventId),
         },
       ])
       .select()
@@ -390,12 +396,13 @@ export default function Home() {
   async function addExpense() {
     const amount = Number(expenseAmount);
 
-    if (!expenseName || amount <= 0) return;
+    if (!expenseName || amount <= 0 || !selectedEventId) return;
 
     const { error } = await supabase.from("expenses").insert([
       {
         name: expenseName,
         amount,
+        event_id: Number(selectedEventId),
       },
     ]);
 
