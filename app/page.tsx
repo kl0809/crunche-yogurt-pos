@@ -143,13 +143,16 @@ export default function Home() {
 
     if (eventsData) {
       setEvents(eventsData);
-
-      if (!selectedEventId && eventsData.length > 0) {
-        setSelectedEventId(String(eventsData[0].id));
+      if (
+        !selectedEventId &&
+        eventsData.length > 0
+      ) {
+        setSelectedEventId(
+          String(eventsData[0].id)
+        );
+        return;
       }
     }
-    
-    if (!selectedEventId) return;
     
     const { data: rawMaterialsData } = await supabase
       .from("raw_materials")
