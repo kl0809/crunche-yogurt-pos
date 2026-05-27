@@ -76,7 +76,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!checkingAuth && selectedEventId) {
+    if (!checkingAuth) {
       loadData();
     }
   }, [filter, selectedEventId, checkingAuth]);
