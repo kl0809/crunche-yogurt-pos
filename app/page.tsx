@@ -61,6 +61,7 @@ export default function Home() {
   const [stockAmount, setStockAmount] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
+  const [eventName, setEventName] = useState("");
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -446,6 +447,24 @@ export default function Home() {
     await loadData();
   }
 
+  async function addEvent() {
+    if (!eventName) return;
+
+    const { error } = await supabase.from("events").insert([
+      {
+        name: eventName,
+      },
+    ]);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setEventName("");
+    await loadData();
+  }
+
   if (checkingAuth) {
   return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -459,6 +478,21 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-4">Crunché Yogurt POS 🍦</h1>
       <div className="mb-6">
         <p className="mb-2 font-semibold">Current Event</p>
+        <div className="mt-4 flex gap-4 flex-wrap">
+          <input
+            value={eventName}
+            onChange={(e) => setEventName(e.target.value)}
+            placeholder="New event name"
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          />
+
+          <button
+            onClick={addEvent}
+            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
+          >
+            Add Event
+          </button>
+        </div>
 
         <select
           value={selectedEventId}
