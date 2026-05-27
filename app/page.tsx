@@ -43,6 +43,11 @@ type RawMaterial = {
   low_stock_alert: number;
 };
 
+type Event = {
+  id: number;
+  name: string;
+};
+
 export default function Home() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -54,6 +59,8 @@ export default function Home() {
   const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [selectedMaterialId, setSelectedMaterialId] = useState("");
   const [stockAmount, setStockAmount] = useState("");
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState("");
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
@@ -128,6 +135,18 @@ export default function Home() {
           cost: Number(product.cost),
         }))
       );
+    }
+    const { data: eventsData } = await supabase
+      .from("events")
+      .select("*")
+      .order("id", { ascending: false });
+
+    if (eventsData) {
+      setEvents(eventsData);
+
+      if (!selectedEventId && eventsData.length > 0) {
+        setSelectedEventId(String(eventsData[0].id));
+      }
     }
     const { data: rawMaterialsData } = await supabase
       .from("raw_materials")
@@ -431,6 +450,23 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-black text-white p-10">
       <h1 className="text-4xl font-bold mb-4">Crunché Yogurt POS 🍦</h1>
+      <div className="mb-6">
+        <p className="mb-2 font-semibold">Current Event</p>
+
+        <select
+          value={selectedEventId}
+          onChange={(e) => setSelectedEventId(e.target.value)}
+          className="bg-white text-black px-4 py-2 rounded-xl"
+        >
+          <option value="">Select event</option>
+
+          {events.map((event) => (
+            <option key={event.id} value={event.id}>
+              {event.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="flex gap-2 mb-6">
         <button onClick={() => setFilter("today")} className="bg-blue-600 px-4 py-2 rounded-xl">
           Today
