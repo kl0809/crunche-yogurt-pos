@@ -479,11 +479,16 @@ export default function Home() {
     <main className="min-h-screen bg-black text-white p-10">
       <h1 className="text-4xl font-bold mb-4">Crunché Yogurt POS 🍦</h1>
       <div className="mb-6">
-        <p className="mb-2 font-semibold">Current Event</p>
-        <div className="mt-4 flex gap-4 flex-wrap">
+        <p className="mb-2 font-semibold">
+          Current Event
+        </p>
+
+        <div className="flex gap-4 flex-wrap mb-4">
           <input
             value={eventName}
-            onChange={(e) => setEventName(e.target.value)}
+            onChange={(e) =>
+              setEventName(e.target.value)
+            }
             placeholder="New event name"
             className="bg-white text-black px-4 py-2 rounded-xl"
           />
@@ -498,13 +503,20 @@ export default function Home() {
 
         <select
           value={selectedEventId}
-          onChange={(e) => setSelectedEventId(e.target.value)}
+          onChange={(e) =>
+            setSelectedEventId(e.target.value)
+          }
           className="bg-white text-black px-4 py-2 rounded-xl"
         >
-          <option value="">Select event</option>
+          <option value="">
+            Select event
+          </option>
 
           {events.map((event) => (
-            <option key={event.id} value={event.id}>
+            <option
+              key={event.id}
+              value={event.id}
+            >
               {event.name}
             </option>
           ))}
