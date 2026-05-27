@@ -76,10 +76,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!checkingAuth) {
+    if (!checkingAuth && selectedEventId) {
       loadData();
     }
-  }, [filter]);
+  }, [filter, selectedEventId, checkingAuth]);
 
   async function checkUser() {
     const { data } = await supabase.auth.getUser();
@@ -90,7 +90,6 @@ export default function Home() {
     }
 
     setCheckingAuth(false);
-    loadData();
   }
 
   function getYesterdayRange() {
