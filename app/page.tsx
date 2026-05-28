@@ -786,6 +786,35 @@ export default function Home() {
             className="bg-white text-black px-4 py-2 rounded-xl"
           />
 
+          <select
+            value={expenseCategory}
+            onChange={(e) => setExpenseCategory(e.target.value)}
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          >
+            <option value="Ingredient">Ingredient</option>
+            <option value="Packaging">Packaging</option>
+            <option value="Rental">Rental</option>
+            <option value="Transport">Transport</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <select
+            value={expenseCostType}
+            onChange={(e) => setExpenseCostType(e.target.value)}
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          >
+            <option value="Consumable">Consumable</option>
+            <option value="Reusable">Reusable</option>
+          </select>
+
+          <input
+            value={expenseNote}
+            onChange={(e) => setExpenseNote(e.target.value)}
+            placeholder="Note"
+            className="bg-white text-black px-4 py-2 rounded-xl"
+          />
+
           <button
             onClick={addExpense}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
@@ -798,6 +827,15 @@ export default function Home() {
           <div key={expense.id} className="mt-4 border-t pt-4">
             <p>
               {expense.name} - RM {expense.amount}
+              <p className="text-gray-400">
+                {expense.category} • {expense.cost_type}
+              </p>
+
+              {expense.note && (
+                <p className="text-gray-400">
+                  Note: {expense.note}
+                </p>
+              )}
             </p>
           </div>
         ))}
