@@ -31,6 +31,7 @@ export default function ExpensesPage() {
   const [expenseCategory, setExpenseCategory] = useState("Ingredient");
   const [expenseCostType, setExpenseCostType] = useState("Consumable");
   const [expenseNote, setExpenseNote] = useState("");
+  const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
 
     useEffect(() => {
     checkUser();
@@ -100,20 +101,32 @@ export default function ExpensesPage() {
 
     if (!expenseName || amount <= 0 || !selectedEventId) return;
 
-    const { error } = await supabase.from("expenses").insert([
-      {
-        name: expenseName,
-        amount,
-        category: expenseCategory,
-        cost_type: expenseCostType,
-        note: expenseNote,
-        event_id: Number(selectedEventId),
-      },
-    ]);
+    const { error } = editingExpenseId
+        ? await supabase
+            .from("expenses")
+            .update({
+            name: expenseName,
+            amount,
+            category: expenseCategory,
+            cost_type: expenseCostType,
+            note: expenseNote,
+            event_id: Number(selectedEventId),
+            })
+            .eq("id", editingExpenseId)
+        : await supabase.from("expenses").insert([
+            {
+            name: expenseName,
+            amount,
+            category: expenseCategory,
+            cost_type: expenseCostType,
+            note: expenseNote,
+            event_id: Number(selectedEventId),
+            },
+        ]);
 
     if (error) {
-      console.error(error);
-      return;
+        console.error(error);
+        return;
     }
 
     setExpenseName("");
@@ -121,9 +134,39 @@ export default function ExpensesPage() {
     setExpenseCategory("Ingredient");
     setExpenseCostType("Consumable");
     setExpenseNote("");
+    setEditingExpenseId(null);
 
     await loadExpenses();
-  }
+    }
+
+    function startEditExpense(expense: Expense) {
+        setEditingExpenseId(expense.id);
+        setExpenseName(expense.name);
+        setExpenseAmount(String(expense.amount));
+        setExpenseCategory(expense.category);
+        setExpenseCostType(expense.cost_type);
+        setExpenseNote(expense.note || "");
+        }
+
+        async function deleteExpense(id: number) {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this expense?"
+        );
+
+        if (!confirmed) return;
+
+        const { error } = await supabase
+            .from("expenses")
+            .delete()
+            .eq("id", id);
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        await loadExpenses();
+    }
 
   function formatMoney(amount: number) {
     return amount.toFixed(2);
@@ -162,7 +205,9 @@ export default function ExpensesPage() {
       </div>
 
       <div className="border p-6 rounded-2xl">
-        <h2 className="text-2xl font-bold">Add Expense</h2>
+        <h2 className="text-2xl font-bold">
+            {editingExpenseId ? "Edit Expense" : "Add Expense"}
+        </h2>
 
         <div className="mt-4 flex gap-4 flex-wrap">
           <input
@@ -213,7 +258,7 @@ export default function ExpensesPage() {
             onClick={addExpense}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
           >
-            Add Expense
+            {editingExpenseId ? "Update Expense" : "Add Expense"}
           </button>
         </div>
       </div>
@@ -234,6 +279,21 @@ export default function ExpensesPage() {
                 Note: {expense.note}
               </p>
             )}
+            <div className="flex gap-2 mt-4">
+                <button
+                    onClick={() => startEditExpense(expense)}
+                    className="bg-yellow-500 text-black px-4 py-2 rounded-xl"
+                >
+                    Edit
+                </button>
+
+                <button
+                    onClick={() => deleteExpense(expense.id)}
+                    className="bg-red-500 text-white px-4 py-2 rounded-xl"
+                >
+                    Delete
+                </button>
+            </div>
           </div>
         ))}
       </div>

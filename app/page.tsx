@@ -240,6 +240,21 @@ export default function Home() {
       .reduce((sum, item) => sum + item.amount, 0);
 
     const netProfit = todayProfit - consumableCosts;
+    const totalOrders = orders.length;
+    const totalItemsSold = orders.reduce(
+      (sum, order) =>
+        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+      0
+    );
+
+    const profitMargin =
+      todaySales > 0 ? (netProfit / todaySales) * 100 : 0;
+
+    const roi =
+      consumableCosts > 0 ? (netProfit / consumableCosts) * 100 : 0;
+
+    const averageOrderValue =
+      totalOrders > 0 ? todaySales / totalOrders : 0;
   function formatMoney(amount: number) {
     return amount.toFixed(2);
   }
@@ -424,7 +439,7 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Today Sales</p>
           <p className="text-2xl font-bold">RM {formatMoney(todaySales)}</p>
@@ -459,6 +474,32 @@ export default function Home() {
               ? `${bestSeller[0]} (${bestSeller[1]})`
               : "No Sales"}
           </h2>
+        </div>
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">Total Orders</p>
+          <p className="text-2xl font-bold">{totalOrders}</p>
+        </div>
+
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">Items Sold</p>
+          <p className="text-2xl font-bold">{totalItemsSold}</p>
+        </div>
+
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">Profit Margin</p>
+          <p className="text-2xl font-bold">{profitMargin.toFixed(1)}%</p>
+        </div>
+
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">ROI</p>
+          <p className="text-2xl font-bold">{roi.toFixed(1)}%</p>
+        </div>
+
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">Average Order</p>
+          <p className="text-2xl font-bold">
+            RM {formatMoney(averageOrderValue)}
+          </p>
         </div>
       </div>
       <div className="mb-8">
