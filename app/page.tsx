@@ -52,6 +52,14 @@ type Event = {
   name: string;
 };
 
+type Recipe = {
+  id: number;
+  product_id: number;
+  raw_material_id: number;
+  quantity_used: number;
+  is_optional: boolean;
+};
+
 export default function Home() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -61,6 +69,7 @@ export default function Home() {
   const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventName, setEventName] = useState("");
 
@@ -137,6 +146,22 @@ export default function Home() {
       .from("events")
       .select("*")
       .order("id", { ascending: false });
+
+    const { data: recipesData } = await supabase
+      .from("recipes")
+      .select("id,product_id,raw_material_id,quantity_used,is_optional");
+
+    if (recipesData) {
+      setRecipes(
+        recipesData.map((recipe) => ({
+          id: recipe.id,
+          product_id: recipe.product_id,
+          raw_material_id: recipe.raw_material_id,
+          quantity_used: Number(recipe.quantity_used),
+          is_optional: Boolean(recipe.is_optional),
+        }))
+      );
+    }
 
     if (eventsData) {
       setEvents(eventsData);
@@ -345,7 +370,41 @@ export default function Home() {
       console.error(itemError);
       return;
     }
+    for (const cartItem of cart) {
+      const productRecipes = recipes.filter(
+        (recipe) =>
+          recipe.product_id === cartItem.id &&
+          !recipe.is_optional
+      );
 
+      for (const recipe of productRecipes) {
+        const { data: materialData, error: materialError } = await supabase
+          .from("raw_materials")
+          .select("stock_quantity")
+          .eq("id", recipe.raw_material_id)
+          .single();
+
+        if (materialError || !materialData) {
+          console.error(materialError);
+          continue;
+        }
+
+        const currentStock = Number(materialData.stock_quantity);
+        const quantityToDeduct = recipe.quantity_used * cartItem.quantity;
+        const newStock = currentStock - quantityToDeduct;
+
+        const { error: updateError } = await supabase
+          .from("raw_materials")
+          .update({
+            stock_quantity: newStock,
+          })
+          .eq("id", recipe.raw_material_id);
+
+        if (updateError) {
+          console.error(updateError);
+        }
+      }
+    }
     setCart([]);
     await loadData();
   }
