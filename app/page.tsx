@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
+import Navbar from "../components/navbar";
 
 type PaymentMethod = "Cash" | "DuitNow" | "TNG";
 
@@ -59,30 +60,19 @@ export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
-  const [selectedMaterialId, setSelectedMaterialId] = useState("");
-  const [stockAmount, setStockAmount] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("");
   const [eventName, setEventName] = useState("");
 
-  const [productName, setProductName] = useState("");
-  const [productPrice, setProductPrice] = useState("");
-  const [productCost, setProductCost] = useState("");
-  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
-  const [expenseName, setExpenseName] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState("");
-  const [expenseCategory, setExpenseCategory] = useState("Ingredient");
-  const [expenseCostType, setExpenseCostType] = useState("Consumable");
-  const [expenseNote, setExpenseNote] = useState("");
-
+  
   useEffect(() => {
     checkUser();
   }, []);
 
   useEffect(() => {
     if (!checkingAuth) {
+      loadProducts();
       loadData();
     }
   }, [filter, selectedEventId, checkingAuth]);
@@ -125,8 +115,7 @@ export default function Home() {
       end: end.toISOString(),
     };
   }
-
-  async function loadData() {
+  async function loadProducts() {
     const { data: productsData } = await supabase
       .from("products")
       .select("*")
@@ -142,6 +131,8 @@ export default function Home() {
         }))
       );
     }
+  }
+  async function loadData() {
     const { data: eventsData } = await supabase
       .from("events")
       .select("*")
@@ -160,22 +151,6 @@ export default function Home() {
       }
     }
     
-    const { data: rawMaterialsData } = await supabase
-      .from("raw_materials")
-      .select("*")
-      .order("id", { ascending: true });
-
-    if (rawMaterialsData) {
-      setRawMaterials(
-        rawMaterialsData.map((material) => ({
-          id: material.id,
-          name: material.name,
-          stock_quantity: Number(material.stock_quantity),
-          unit: material.unit,
-          low_stock_alert: Number(material.low_stock_alert),
-        }))
-      );
-    }
     let start = "";
     let end = "";
 
@@ -253,42 +228,6 @@ export default function Home() {
     }
   }
 
-  async function addProduct() {
-    const price = Number(productPrice);
-    const cost = Number(productCost);
-
-        if (!productName || price <= 0 || cost < 0) return;
-
-        const { error } = editingProductId
-          ? await supabase
-              .from("products")
-              .update({
-                name: productName,
-                price,
-                cost,
-              })
-              .eq("id", editingProductId)
-          : await supabase.from("products").insert([
-              {
-                name: productName,
-                price,
-                cost,
-              },
-            ]);
-
-        if (error) {
-          console.error(error);
-          return;
-        }
-
-        setProductName("");
-        setProductPrice("");
-        setProductCost("");
-        setEditingProductId(null);
-
-        await loadData();
-      }
-
     const todaySales = orders.reduce((sum, order) => sum + order.total, 0);
     const todayProfit = orders.reduce((sum, order) => sum + order.profit, 0);
 
@@ -344,26 +283,6 @@ export default function Home() {
       setCart([...cart, { ...product, quantity: 1 }]);
     }
   }
-  async function deleteProduct(id: number) {
-    const { error } = await supabase
-      .from("products")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    await loadData();
-  }
-    function startEditProduct(product: Product) {
-    setEditingProductId(product.id);
-    setProductName(product.name);
-    setProductPrice(String(product.price));
-    setProductCost(String(product.cost));
-  }
-
   function decreaseQuantity(productId: number) {
     setCart(
       cart
@@ -416,65 +335,6 @@ export default function Home() {
     await loadData();
   }
 
-  async function addExpense() {
-    const amount = Number(expenseAmount);
-
-    if (!expenseName || amount <= 0 || !selectedEventId) return;
-
-    const { error } = await supabase.from("expenses").insert([
-      {
-        name: expenseName,
-        amount,
-        category: expenseCategory,
-        cost_type: expenseCostType,
-        note: expenseNote,
-        event_id: Number(selectedEventId),
-      },
-    ]);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setExpenseName("");
-    setExpenseAmount("");
-    setExpenseCategory("Ingredient");
-    setExpenseCostType("Consumable");
-    setExpenseNote("");
-    await loadData();
-  }
-
-  async function addStock() {
-    const amount = Number(stockAmount);
-    const materialId = Number(selectedMaterialId);
-
-    if (!materialId || amount <= 0) return;
-
-    const material = rawMaterials.find((item) => item.id === materialId);
-
-    if (!material) return;
-
-    const newStock = material.stock_quantity + amount;
-
-    const { error } = await supabase
-      .from("raw_materials")
-      .update({
-        stock_quantity: newStock,
-      })
-      .eq("id", materialId);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setSelectedMaterialId("");
-    setStockAmount("");
-
-    await loadData();
-  }
-
   async function addEvent() {
     if (!eventName) return;
 
@@ -503,6 +363,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-black text-white p-10">
+      <Navbar />
+
       <h1 className="text-4xl font-bold mb-4">Crunché Yogurt POS 🍦</h1>
       <div className="mb-6">
         <p className="mb-2 font-semibold">
@@ -599,122 +461,28 @@ export default function Home() {
           </h2>
         </div>
       </div>
-      <div className="mb-8 border p-6 rounded-2xl">
-  <h2 className="text-2xl font-bold">Inventory</h2>
-  <div className="mt-4 flex gap-4 flex-wrap">
-    <select
-      value={selectedMaterialId}
-      onChange={(e) => setSelectedMaterialId(e.target.value)}
-      className="bg-white text-black px-4 py-2 rounded-xl"
-    >
-      <option value="">Select material</option>
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold mb-4">Add Order</h2>
 
-      {rawMaterials.map((material) => (
-        <option key={material.id} value={material.id}>
-          {material.name}
-        </option>
-      ))}
-    </select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {products.map((product) => (
+            <div key={product.id} className="border p-4 rounded-2xl">
+              <h3 className="text-2xl font-semibold">{product.name}</h3>
 
-    <input
-      value={stockAmount}
-      onChange={(e) => setStockAmount(e.target.value)}
-      placeholder="Amount to add"
-      type="number"
-      className="bg-white text-black px-4 py-2 rounded-xl"
-    />
+              <p className="mt-2 text-gray-400">
+                Price: RM {formatMoney(product.price)}
+              </p>
 
-    <button
-      onClick={addStock}
-      className="bg-green-600 text-white px-4 py-2 rounded-xl"
-    >
-      Add Stock
-    </button>
-  </div>
-
-  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-      {rawMaterials.map((material) => (
-        <div key={material.id} className="border p-4 rounded-xl">
-          <p className="font-bold">{material.name}</p>
-
-          <p className="text-xl mt-2">
-            {material.stock_quantity} {material.unit}
-          </p>
-
-          {material.stock_quantity <= material.low_stock_alert && (
-            <p className="text-red-400 mt-2">Low stock warning</p>
-          )}
-        </div>
-      ))}
-    </div>
-  </div>
-      <div className="mb-8 border p-6 rounded-2xl">
-        <h2 className="text-2xl font-bold">Add Product</h2>
-
-        <div className="mt-4 flex gap-4">
-          <input
-            value={productName}
-            onChange={(e) => setProductName(e.target.value)}
-            placeholder="Product name"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <input
-            value={productPrice}
-            onChange={(e) => setProductPrice(e.target.value)}
-            placeholder="Price"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <input
-            value={productCost}
-            onChange={(e) => setProductCost(e.target.value)}
-            placeholder="Cost"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <button
-            onClick={addProduct}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-          >
-            {editingProductId ? "Update Product" : "Add Product"}
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {products.map((product) => (
-          <div key={product.id} className="border p-4 rounded-2xl">
-            <h2 className="text-2xl font-semibold">{product.name}</h2>
-            <p className="mt-2 text-gray-400">Price: RM {product.price}</p>
-            <p className="text-gray-400">Cost: RM {product.cost}</p>
-            <div className="flex gap-2 mt-4">
               <button
                 onClick={() => addToCart(product)}
                 className="mt-4 bg-white text-black px-4 py-2 rounded-xl"
               >
                 Add Order
               </button>
-
-              <button
-                onClick={() => startEditProduct(product)}
-                className="mt-2 bg-yellow-500 text-black px-4 py-2 rounded-xl"
-              >
-                Edit
-              </button>
-
-              <button
-                onClick={() => deleteProduct(product.id)}
-                className="mt-2 bg-red-500 text-white px-4 py-2 rounded-xl"
-              >
-                Delete
-              </button>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-
       <div className="mt-10 border p-6 rounded-2xl">
         <h2 className="text-2xl font-bold">Current Order</h2>
 
@@ -783,132 +551,6 @@ export default function Home() {
           >
             Checkout
           </button>
-        </div>
-      </div>
-
-      <div className="mt-10 border p-6 rounded-2xl">
-        <h2 className="text-2xl font-bold">Expenses</h2>
-
-        <div className="mt-4 flex gap-4 flex-wrap">
-          <input
-            value={expenseName}
-            onChange={(e) => setExpenseName(e.target.value)}
-            placeholder="Expense name"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <input
-            value={expenseAmount}
-            onChange={(e) => setExpenseAmount(e.target.value)}
-            placeholder="Amount"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <select
-            value={expenseCategory}
-            onChange={(e) => setExpenseCategory(e.target.value)}
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          >
-            <option value="Ingredient">Ingredient</option>
-            <option value="Packaging">Packaging</option>
-            <option value="Rental">Rental</option>
-            <option value="Transport">Transport</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <select
-            value={expenseCostType}
-            onChange={(e) => setExpenseCostType(e.target.value)}
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          >
-            <option value="Consumable">Consumable</option>
-            <option value="Reusable">Reusable</option>
-          </select>
-
-          <input
-            value={expenseNote}
-            onChange={(e) => setExpenseNote(e.target.value)}
-            placeholder="Note"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <button
-            onClick={addExpense}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-          >
-            Add Expense
-          </button>
-        </div>
-
-        {expenses.map((expense) => (
-          <div key={expense.id} className="mt-4 border-t pt-4">
-            <p>
-              {expense.name} - RM {formatMoney(expense.amount)}
-            </p>
-
-            <p className="text-gray-400">
-              {expense.category} • {expense.cost_type}
-            </p>
-
-            {expense.note && (
-              <p className="text-gray-400">
-                Note: {expense.note}
-              </p>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-10 border p-6 rounded-2xl">
-        <h2 className="text-2xl font-bold">Today Orders</h2>
-
-        {orders.length === 0 && (
-          <p className="mt-4 text-gray-400">No orders yet.</p>
-        )}
-
-        <div className="mt-4 space-y-4">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="border p-4 rounded-xl"
-            >
-              <div className="flex justify-between">
-                <h3 className="font-bold">
-                  Order #{order.id}
-                </h3>
-
-                <p className="text-sm text-gray-400">
-                  {new Date().toLocaleTimeString()}
-                </p>
-              </div>
-
-              <p className="mt-2">
-                Payment: {order.paymentMethod}
-              </p>
-
-              <p>
-                Total: RM {formatMoney(order.total)}
-              </p>
-
-              <p>
-                Profit: RM {formatMoney(order.profit)}
-              </p>
-
-              <div className="mt-2">
-                <p className="font-semibold">
-                  Items:
-                </p>
-
-                {order.items.map((item, index) => (
-                  <p key={index}>
-                    {item.name} x {item.quantity}
-                  </p>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </main>
