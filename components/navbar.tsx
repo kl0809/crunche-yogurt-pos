@@ -37,6 +37,12 @@ export default function Navbar() {
       >
         Orders
       </Link>
+      <Link
+        href="/recipes"
+        className="bg-white text-black px-4 py-2 rounded-xl"
+      >
+        Recipes
+      </Link>
     </nav>
   );
 }
