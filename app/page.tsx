@@ -237,19 +237,25 @@ export default function Home() {
         );
       }
 
+    if (expensesData) {
       setExpenses(
-          expensesData.map((expense) => ({
-            id: expense.id,
-            name: expense.name,
-            amount: Number(expense.amount),
-            category: expense.category,
-            cost_type: expense.cost_type,
-            note: expense.note,
-          }))
-        );
-    async function addProduct() {
-        const price = Number(productPrice);
-        const cost = Number(productCost);
+        expensesData.map((expense) => ({
+          id: expense.id,
+          name: expense.name,
+          amount: Number(expense.amount),
+          category: expense.category,
+          cost_type: expense.cost_type,
+          note: expense.note,
+        }))
+      );
+    } else {
+      setExpenses([]);
+    }
+  }
+
+  async function addProduct() {
+    const price = Number(productPrice);
+    const cost = Number(productCost);
 
         if (!productName || price <= 0 || cost < 0) return;
 
@@ -770,7 +776,7 @@ export default function Home() {
       <div className="mt-10 border p-6 rounded-2xl">
         <h2 className="text-2xl font-bold">Expenses</h2>
 
-        <div className="mt-4 flex gap-4">
+        <div className="mt-4 flex gap-4 flex-wrap">
           <input
             value={expenseName}
             onChange={(e) => setExpenseName(e.target.value)}
@@ -826,17 +832,18 @@ export default function Home() {
         {expenses.map((expense) => (
           <div key={expense.id} className="mt-4 border-t pt-4">
             <p>
-              {expense.name} - RM {expense.amount}
-              <p className="text-gray-400">
-                {expense.category} • {expense.cost_type}
-              </p>
-
-              {expense.note && (
-                <p className="text-gray-400">
-                  Note: {expense.note}
-                </p>
-              )}
+              {expense.name} - RM {formatMoney(expense.amount)}
             </p>
+
+            <p className="text-gray-400">
+              {expense.category} • {expense.cost_type}
+            </p>
+
+            {expense.note && (
+              <p className="text-gray-400">
+                Note: {expense.note}
+              </p>
+            )}
           </div>
         ))}
       </div>
