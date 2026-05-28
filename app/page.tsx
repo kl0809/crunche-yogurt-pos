@@ -26,6 +26,9 @@ type Expense = {
   id: number;
   name: string;
   amount: number;
+  category: string;
+  cost_type: string;
+  note: string | null;
 };
 
 type Product = {
@@ -70,6 +73,9 @@ export default function Home() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [expenseName, setExpenseName] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseCategory, setExpenseCategory] = useState("Ingredient");
+  const [expenseCostType, setExpenseCostType] = useState("Consumable");
+  const [expenseNote, setExpenseNote] = useState("");
 
   useEffect(() => {
     checkUser();
@@ -231,16 +237,16 @@ export default function Home() {
         );
       }
 
-      if (expensesData) {
-        setExpenses(
-          expensesData.map((expense: any) => ({
+      setExpenses(
+          expensesData.map((expense) => ({
             id: expense.id,
             name: expense.name,
             amount: Number(expense.amount),
+            category: expense.category,
+            cost_type: expense.cost_type,
+            note: expense.note,
           }))
         );
-      }
-    }
     async function addProduct() {
         const price = Number(productPrice);
         const cost = Number(productCost);
@@ -405,6 +411,9 @@ export default function Home() {
       {
         name: expenseName,
         amount,
+        category: expenseCategory,
+        cost_type: expenseCostType,
+        note: expenseNote,
         event_id: Number(selectedEventId),
       },
     ]);
@@ -416,6 +425,9 @@ export default function Home() {
 
     setExpenseName("");
     setExpenseAmount("");
+    setExpenseCategory("Ingredient");
+    setExpenseCostType("Consumable");
+    setExpenseNote("");
     await loadData();
   }
 
