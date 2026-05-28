@@ -289,10 +289,18 @@ export default function Home() {
         await loadData();
       }
 
-  const todaySales = orders.reduce((sum, order) => sum + order.total, 0);
-  const todayProfit = orders.reduce((sum, order) => sum + order.profit, 0);
-  const totalExpenses = expenses.reduce((sum, item) => sum + item.amount, 0);
-  const netProfit = todayProfit - totalExpenses;
+    const todaySales = orders.reduce((sum, order) => sum + order.total, 0);
+    const todayProfit = orders.reduce((sum, order) => sum + order.profit, 0);
+
+    const consumableCosts = expenses
+      .filter((expense) => expense.cost_type === "Consumable")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const reusablePurchases = expenses
+      .filter((expense) => expense.cost_type === "Reusable")
+      .reduce((sum, item) => sum + item.amount, 0);
+
+    const netProfit = todayProfit - consumableCosts;
   function formatMoney(amount: number) {
     return amount.toFixed(2);
   }
@@ -554,7 +562,7 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="mb-8 grid grid-cols-4 gap-4">
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="border p-4 rounded-2xl">
           <p className="text-gray-400">Today Sales</p>
           <p className="text-2xl font-bold">RM {formatMoney(todaySales)}</p>
@@ -566,8 +574,13 @@ export default function Home() {
         </div>
 
         <div className="border p-4 rounded-2xl">
-          <p className="text-gray-400">Expenses</p>
-          <p className="text-2xl font-bold">RM {formatMoney(totalExpenses)}</p>
+          <p className="text-gray-400">Consumable Costs</p>
+          <p className="text-2xl font-bold">RM {formatMoney(consumableCosts)}</p>
+        </div>
+
+        <div className="border p-4 rounded-2xl">
+          <p className="text-gray-400">Reusable Purchases</p>
+          <p className="text-2xl font-bold">RM {formatMoney(reusablePurchases)}</p>
         </div>
 
         <div className="border p-4 rounded-2xl">
