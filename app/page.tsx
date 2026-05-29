@@ -74,6 +74,8 @@ export default function Home() {
   const [eventName, setEventName] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
+  const [smallBagQuantity, setSmallBagQuantity] = useState(0);
+  const [bigBagQuantity, setBigBagQuantity] = useState(0);
   
   useEffect(() => {
     checkUser();
@@ -320,7 +322,13 @@ export default function Home() {
         )
       );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart([
+        ...cart,
+        {
+          ...product,
+          quantity: 1,
+        },
+      ]);
     }
   }
   function decreaseQuantity(productId: number) {
@@ -334,7 +342,7 @@ export default function Home() {
         .filter((item) => item.quantity > 0)
     );
   }
-
+  
   async function checkout() {
     if (cart.length === 0 || !selectedEventId) return;
 
@@ -377,6 +385,40 @@ export default function Home() {
           !recipe.is_optional
       );
 
+      const bagDeductions = [
+        { name: "Small Bag", quantity: smallBagQuantity },
+        { name: "Big Bag", quantity: bigBagQuantity },
+      ];
+
+      for (const bag of bagDeductions) {
+        if (bag.quantity <= 0) continue;
+
+        const { data: materialData, error: materialError } = await supabase
+          .from("raw_materials")
+          .select("id,stock_quantity")
+          .eq("name", bag.name)
+          .single();
+
+        if (materialError || !materialData) {
+          console.error(materialError);
+          continue;
+        }
+
+        const currentStock = Number(materialData.stock_quantity);
+        const newStock = currentStock - bag.quantity;
+
+        const { error: updateError } = await supabase
+          .from("raw_materials")
+          .update({
+            stock_quantity: newStock,
+          })
+          .eq("id", materialData.id);
+
+        if (updateError) {
+          console.error(updateError);
+        }
+      }
+
       for (const recipe of productRecipes) {
         const { data: materialData, error: materialError } = await supabase
           .from("raw_materials")
@@ -406,6 +448,8 @@ export default function Home() {
       }
     }
     setCart([]);
+    setSmallBagQuantity(0);
+    setBigBagQuantity(0);
     await loadData();
   }
 
@@ -621,6 +665,37 @@ export default function Home() {
         <h3 className="mt-6 text-3xl font-bold">Total: RM {total}</h3>
         <h3 className="mt-2 text-2xl font-bold">Profit: RM {profit}</h3>
 
+        <div className="mt-6 border p-4 rounded-xl">
+          <p className="mb-3 font-semibold">Bag Usage</p>
+
+          <div className="flex gap-4 flex-wrap">
+            <div>
+              <p className="mb-1 text-sm text-gray-400">Small Bag Qty</p>
+              <input
+                type="number"
+                min="0"
+                value={smallBagQuantity}
+                onChange={(e) =>
+                  setSmallBagQuantity(Math.max(0, Number(e.target.value)))
+                }
+                className="bg-white text-black px-4 py-2 rounded-xl w-36"
+              />
+            </div>
+
+            <div>
+              <p className="mb-1 text-sm text-gray-400">Big Bag Qty</p>
+              <input
+                type="number"
+                min="0"
+                value={bigBagQuantity}
+                onChange={(e) =>
+                  setBigBagQuantity(Math.max(0, Number(e.target.value)))
+                }
+                className="bg-white text-black px-4 py-2 rounded-xl w-36"
+              />
+            </div>
+          </div>
+        </div>
         <div className="mt-6">
           <p className="mb-2 font-semibold">Payment Method</p>
 
