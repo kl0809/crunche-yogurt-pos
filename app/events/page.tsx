@@ -10,6 +10,11 @@ type Event = {
   name: string;
   start_date: string | null;
   end_date: string | null;
+
+  revenue?: number;
+  expenses?: number;
+  netProfit?: number;
+  orderCount?: number;
 };
 
 export default function EventsPage() {
@@ -50,7 +55,53 @@ export default function EventsPage() {
       .order("id", { ascending: false });
 
     if (data) {
-      setEvents(data);
+      const eventsWithSummary = await Promise.all(
+        data.map(async (event) => {
+            const { data: orders } = await supabase
+            .from("orders")
+            .select("total,profit")
+            .eq("event_id", event.id);
+
+            const { data: expenses } = await supabase
+            .from("expenses")
+            .select("amount,cost_type")
+            .eq("event_id", event.id);
+
+            const revenue =
+            orders?.reduce(
+                (sum, order) => sum + Number(order.total),
+                0
+            ) || 0;
+
+            const grossProfit =
+            orders?.reduce(
+                (sum, order) => sum + Number(order.profit),
+                0
+            ) || 0;
+
+            const consumableExpenses =
+            expenses
+                ?.filter(
+                (expense) =>
+                    expense.cost_type === "Consumable"
+                )
+                .reduce(
+                (sum, expense) =>
+                    sum + Number(expense.amount),
+                0
+                ) || 0;
+
+            return {
+            ...event,
+            revenue,
+            expenses: consumableExpenses,
+            netProfit: grossProfit - consumableExpenses,
+            orderCount: orders?.length || 0,
+            };
+        })
+        );
+
+        setEvents(eventsWithSummary);
     }
   }
 
@@ -189,6 +240,35 @@ export default function EventsPage() {
               {event.start_date || "No start date"} to{" "}
               {event.end_date || "No end date"}
             </p>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Revenue</p>
+                    <p className="text-xl font-bold">
+                    RM {(event.revenue || 0).toFixed(2)}
+                    </p>
+                </div>
+
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Expenses</p>
+                    <p className="text-xl font-bold">
+                    RM {(event.expenses || 0).toFixed(2)}
+                    </p>
+                </div>
+
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Net Profit</p>
+                    <p className="text-xl font-bold">
+                    RM {(event.netProfit || 0).toFixed(2)}
+                    </p>
+                </div>
+
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Orders</p>
+                    <p className="text-xl font-bold">
+                    {event.orderCount || 0}
+                    </p>
+                </div>
+            </div>
             <div className="flex gap-2 mt-4">
                 <button
                     onClick={() => startEditEvent(event)}
