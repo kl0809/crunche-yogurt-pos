@@ -50,6 +50,8 @@ type RawMaterial = {
 type Event = {
   id: number;
   name: string;
+  start_date: string | null;
+  end_date: string | null;
 };
 
 type Recipe = {
@@ -69,10 +71,9 @@ export default function Home() {
   const [filter, setFilter] = useState<"today" | "yesterday" | "all">("today");
   const [products, setProducts] = useState<Product[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  
   const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [eventName, setEventName] = useState("");
-
+  const [selectedEventId, setSelectedEventId] = useState("overall");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [smallBagQuantity, setSmallBagQuantity] = useState(0);
   const [bigBagQuantity, setBigBagQuantity] = useState(0);
@@ -149,6 +150,10 @@ export default function Home() {
       .select("*")
       .order("id", { ascending: false });
 
+    if (eventsData) {
+      setEvents(eventsData);
+    }
+
     const { data: recipesData } = await supabase
       .from("recipes")
       .select("id,product_id,raw_material_id,quantity_used,is_optional");
@@ -163,19 +168,6 @@ export default function Home() {
           is_optional: Boolean(recipe.is_optional),
         }))
       );
-    }
-
-    if (eventsData) {
-      setEvents(eventsData);
-      if (
-        !selectedEventId &&
-        eventsData.length > 0
-      ) {
-        setSelectedEventId(
-          String(eventsData[0].id)
-        );
-        return;
-      }
     }
     
     let start = "";
@@ -196,9 +188,11 @@ export default function Home() {
     let ordersQuery = supabase
       .from("orders")
       .select("id,total,profit,payment_method,created_at,order_items(*)")
-      .eq("event_id", Number(selectedEventId))
       .order("id", { ascending: false });
 
+    if (selectedEventId !== "overall") {
+      ordersQuery = ordersQuery.eq("event_id", Number(selectedEventId));
+    }
     if (filter !== "all") {
       ordersQuery = ordersQuery
         .gte("created_at", start)
@@ -210,8 +204,11 @@ export default function Home() {
     let expensesQuery = supabase
       .from("expenses")
       .select("*")
-      .eq("event_id", Number(selectedEventId))
       .order("id", { ascending: false });
+
+    if (selectedEventId !== "overall") {
+      expensesQuery = expensesQuery.eq("event_id", Number(selectedEventId));
+    }
 
     if (filter !== "all") {
       expensesQuery = expensesQuery
@@ -344,7 +341,14 @@ export default function Home() {
   }
   
   async function checkout() {
-    if (cart.length === 0 || !selectedEventId) return;
+    if (
+      cart.length === 0 ||
+      !selectedEventId ||
+      selectedEventId === "overall"
+    ) {
+      alert("Please select an event before checkout.");
+      return;
+    }
 
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -378,46 +382,13 @@ export default function Home() {
       console.error(itemError);
       return;
     }
+
     for (const cartItem of cart) {
       const productRecipes = recipes.filter(
         (recipe) =>
           recipe.product_id === cartItem.id &&
           !recipe.is_optional
       );
-
-      const bagDeductions = [
-        { name: "Small Bag", quantity: smallBagQuantity },
-        { name: "Big Bag", quantity: bigBagQuantity },
-      ];
-
-      for (const bag of bagDeductions) {
-        if (bag.quantity <= 0) continue;
-
-        const { data: materialData, error: materialError } = await supabase
-          .from("raw_materials")
-          .select("id,stock_quantity")
-          .eq("name", bag.name)
-          .single();
-
-        if (materialError || !materialData) {
-          console.error(materialError);
-          continue;
-        }
-
-        const currentStock = Number(materialData.stock_quantity);
-        const newStock = currentStock - bag.quantity;
-
-        const { error: updateError } = await supabase
-          .from("raw_materials")
-          .update({
-            stock_quantity: newStock,
-          })
-          .eq("id", materialData.id);
-
-        if (updateError) {
-          console.error(updateError);
-        }
-      }
 
       for (const recipe of productRecipes) {
         const { data: materialData, error: materialError } = await supabase
@@ -447,27 +418,44 @@ export default function Home() {
         }
       }
     }
+
+    const bagDeductions = [
+      { name: "Small Bag", quantity: smallBagQuantity },
+      { name: "Big Bag", quantity: bigBagQuantity },
+    ];
+
+    for (const bag of bagDeductions) {
+      if (bag.quantity <= 0) continue;
+
+      const { data: materialData, error: materialError } = await supabase
+        .from("raw_materials")
+        .select("id,stock_quantity")
+        .eq("name", bag.name)
+        .single();
+
+      if (materialError || !materialData) {
+        console.error(materialError);
+        continue;
+      }
+
+      const currentStock = Number(materialData.stock_quantity);
+      const newStock = currentStock - bag.quantity;
+
+      const { error: updateError } = await supabase
+        .from("raw_materials")
+        .update({
+          stock_quantity: newStock,
+        })
+        .eq("id", materialData.id);
+
+      if (updateError) {
+        console.error(updateError);
+      }
+    }
+
     setCart([]);
     setSmallBagQuantity(0);
     setBigBagQuantity(0);
-    await loadData();
-  }
-
-  async function addEvent() {
-    if (!eventName) return;
-
-    const { error } = await supabase.from("events").insert([
-      {
-        name: eventName,
-      },
-    ]);
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setEventName("");
     await loadData();
   }
 
@@ -489,24 +477,6 @@ export default function Home() {
           Current Event
         </p>
 
-        <div className="flex gap-4 flex-wrap mb-4">
-          <input
-            value={eventName}
-            onChange={(e) =>
-              setEventName(e.target.value)
-            }
-            placeholder="New event name"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
-          <button
-            onClick={addEvent}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl"
-          >
-            Add Event
-          </button>
-        </div>
-
         <select
           value={selectedEventId}
           onChange={(e) =>
@@ -514,9 +484,9 @@ export default function Home() {
           }
           className="bg-white text-black px-4 py-2 rounded-xl"
         >
-          <option value="">
-            Select event
-          </option>
+        <option value="overall">
+          Overall
+        </option>
 
           {events.map((event) => (
             <option
@@ -524,6 +494,9 @@ export default function Home() {
               value={event.id}
             >
               {event.name}
+              {event.start_date && event.end_date
+                ? ` (${event.start_date} to ${event.end_date})`
+                : ""}
             </option>
           ))}
         </select>

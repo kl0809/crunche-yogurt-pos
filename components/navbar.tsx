@@ -43,6 +43,12 @@ export default function Navbar() {
       >
         Recipes
       </Link>
+      <Link
+        href="/events"
+        className="bg-white text-black px-4 py-2 rounded-xl"
+      >
+        Events
+      </Link>
     </nav>
   );
 }
