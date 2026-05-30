@@ -15,6 +15,10 @@ type Event = {
   expenses?: number;
   netProfit?: number;
   orderCount?: number;
+  roi?: number;
+  itemsSold?: number;
+  averageOrder?: number;
+  bestSeller?: string;
 };
 
 export default function EventsPage() {
@@ -59,8 +63,12 @@ export default function EventsPage() {
         data.map(async (event) => {
             const { data: orders } = await supabase
             .from("orders")
-            .select("total,profit")
+            .select("total,profit,id")
             .eq("event_id", event.id);
+
+            const { data: orderItems } = await supabase
+            .from("order_items")
+            .select("product_name,quantity,order_id");
 
             const { data: expenses } = await supabase
             .from("expenses")
@@ -91,12 +99,54 @@ export default function EventsPage() {
                 0
                 ) || 0;
 
+            const eventOrderIds =
+                orders?.map((order) => order.id) || [];
+
+                const eventItems =
+                orderItems?.filter((item) =>
+                    eventOrderIds.includes(item.order_id)
+                ) || [];
+
+                const itemsSold = eventItems.reduce(
+                (sum, item) => sum + item.quantity,
+                0
+                );
+
+                const averageOrder =
+                orders && orders.length > 0
+                    ? revenue / orders.length
+                    : 0;
+
+                const roi =
+                consumableExpenses > 0
+                    ? ((grossProfit - consumableExpenses) /
+                        consumableExpenses) *
+                    100
+                    : 0;
+
+                const productSales: Record<string, number> = {};
+
+                eventItems.forEach((item) => {
+                productSales[item.product_name] =
+                    (productSales[item.product_name] || 0) +
+                    item.quantity;
+                });
+
+                const bestSeller =
+                Object.entries(productSales).sort(
+                    (a, b) => b[1] - a[1]
+                )[0]?.[0] || "No Sales";
+
             return {
-            ...event,
-            revenue,
-            expenses: consumableExpenses,
-            netProfit: grossProfit - consumableExpenses,
-            orderCount: orders?.length || 0,
+                ...event,
+                revenue,
+                expenses: consumableExpenses,
+                netProfit: grossProfit - consumableExpenses,
+                orderCount: orders?.length || 0,
+                roi,
+                itemsSold,
+                averageOrder,
+                bestSeller,
             };
         })
         );
@@ -266,6 +316,34 @@ export default function EventsPage() {
                     <p className="text-gray-400 text-sm">Orders</p>
                     <p className="text-xl font-bold">
                     {event.orderCount || 0}
+                    </p>
+                </div>
+
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">ROI</p>
+                    <p className="text-xl font-bold">
+                        {(event.roi || 0).toFixed(1)}%
+                    </p>
+                </div>
+
+                    <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Items Sold</p>
+                    <p className="text-xl font-bold">
+                        {event.itemsSold || 0}
+                    </p>
+                </div>
+
+                    <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Average Order</p>
+                    <p className="text-xl font-bold">
+                        RM {(event.averageOrder || 0).toFixed(2)}
+                    </p>
+                </div>
+
+                    <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Best Seller</p>
+                    <p className="text-xl font-bold">
+                        {event.bestSeller || "No Sales"}
                     </p>
                 </div>
             </div>
