@@ -11,6 +11,8 @@ type RawMaterial = {
   stock_quantity: number;
   unit: string;
   low_stock_alert: number;
+  purchase_cost: number;
+  purchase_quantity: number;
 };
 
 export default function InventoryPage() {
@@ -20,6 +22,8 @@ export default function InventoryPage() {
   const [newMaterialName, setNewMaterialName] = useState("");
   const [newMaterialUnit, setNewMaterialUnit] = useState("pcs");
   const [newMaterialAlert, setNewMaterialAlert] = useState("");
+  const [newPurchaseCost, setNewPurchaseCost] = useState("");
+  const [newPurchaseQuantity, setNewPurchaseQuantity] = useState(""); 
   const [editingMaterialId, setEditingMaterialId] = useState<number | null>(null);
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -59,6 +63,8 @@ export default function InventoryPage() {
           stock_quantity: Number(material.stock_quantity),
           unit: material.unit,
           low_stock_alert: Number(material.low_stock_alert),
+          purchase_cost: Number(material.purchase_cost || 0),
+          purchase_quantity: Number(material.purchase_quantity || 0),
         }))
       );
     }
@@ -95,10 +101,18 @@ export default function InventoryPage() {
   }
 
     async function addMaterial() {
-        const alertAmount = Number(newMaterialAlert);
+      const alertAmount = Number(newMaterialAlert);
+      const purchaseCost = Number(newPurchaseCost);
+      const purchaseQuantity = Number(newPurchaseQuantity);
 
-        if (!newMaterialName || !newMaterialUnit || alertAmount < 0) return;
-
+      if (
+        !newMaterialName ||
+        !newMaterialUnit ||
+        alertAmount < 0 ||
+        purchaseCost < 0 ||
+        purchaseQuantity < 0
+      ) return;
+      
         const { error } = editingMaterialId
             ? await supabase
                 .from("raw_materials")
@@ -106,6 +120,8 @@ export default function InventoryPage() {
                 name: newMaterialName,
                 unit: newMaterialUnit,
                 low_stock_alert: alertAmount,
+                purchase_cost: purchaseCost,
+                purchase_quantity: purchaseQuantity,
                 })
                 .eq("id", editingMaterialId)
             : await supabase.from("raw_materials").insert([
@@ -114,6 +130,8 @@ export default function InventoryPage() {
                 stock_quantity: 0,
                 unit: newMaterialUnit,
                 low_stock_alert: alertAmount,
+                purchase_cost: purchaseCost,
+                purchase_quantity: purchaseQuantity,
                 },
             ]);
 
@@ -125,17 +143,21 @@ export default function InventoryPage() {
         setNewMaterialName("");
         setNewMaterialUnit("pcs");
         setNewMaterialAlert("");
+        setNewPurchaseCost("");
+        setNewPurchaseQuantity("");
         setEditingMaterialId(null);
 
         await loadRawMaterials();
     }
 
-    function startEditMaterial(material: RawMaterial) {
+      function startEditMaterial(material: RawMaterial) {
         setEditingMaterialId(material.id);
         setNewMaterialName(material.name);
         setNewMaterialUnit(material.unit);
         setNewMaterialAlert(String(material.low_stock_alert));
-        }
+        setNewPurchaseCost(String(material.purchase_cost));
+        setNewPurchaseQuantity(String(material.purchase_quantity));
+      }
 
         async function deleteMaterial(id: number) {
         const confirmed = window.confirm(
@@ -203,6 +225,22 @@ export default function InventoryPage() {
             className="bg-white text-black px-4 py-2 rounded-xl"
             />
 
+            <input
+              value={newPurchaseCost}
+              onChange={(e) => setNewPurchaseCost(e.target.value)}
+              placeholder="Purchase cost"
+              type="number"
+              className="bg-white text-black px-4 py-2 rounded-xl"
+            />
+
+            <input
+              value={newPurchaseQuantity}
+              onChange={(e) => setNewPurchaseQuantity(e.target.value)}
+              placeholder="Purchase quantity"
+              type="number"
+              className="bg-white text-black px-4 py-2 rounded-xl"
+            />
+
             <button
             onClick={addMaterial}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
@@ -254,6 +292,14 @@ export default function InventoryPage() {
 
             <p className="text-xl mt-2">
               {material.stock_quantity} {material.unit}
+            </p>
+
+            <p className="text-gray-400 mt-1">
+              Unit Cost: RM{" "}
+              {material.purchase_quantity > 0
+                ? (material.purchase_cost / material.purchase_quantity).toFixed(4)
+                : "0.0000"}
+              / {material.unit}
             </p>
 
             {material.stock_quantity <= material.low_stock_alert && (

@@ -45,6 +45,8 @@ type RawMaterial = {
   stock_quantity: number;
   unit: string;
   low_stock_alert: number;
+  purchase_cost: number;
+  purchase_quantity: number;
 };
 
 type Event = {

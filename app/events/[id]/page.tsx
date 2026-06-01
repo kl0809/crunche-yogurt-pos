@@ -12,17 +12,24 @@ type Event = {
   end_date: string | null;
 };
 
+type OrderItem = {
+  product_name: string;
+  quantity: number;
+};
+
 type Order = {
   id: number;
   total: number;
   profit: number;
   payment_method: string;
+  order_items: OrderItem[];
 };
 
 type Expense = {
   id: number;
   amount: number;
   cost_type: string;
+  category: string;
 };
 
 export default function EventDetailsPage() {
@@ -68,7 +75,7 @@ export default function EventDetailsPage() {
     }
     const { data: ordersData } = await supabase
         .from("orders")
-        .select("id,total,profit,payment_method")
+        .select("id,total,profit,payment_method,order_items(product_name,quantity)")
         .eq("event_id", eventId);
 
         if (ordersData) {
@@ -78,22 +85,24 @@ export default function EventDetailsPage() {
             total: Number(order.total),
             profit: Number(order.profit),
             payment_method: order.payment_method,
+            order_items: order.order_items || [],
             }))
         );
         }
 
         const { data: expensesData } = await supabase
         .from("expenses")
-        .select("id,amount,cost_type")
+        .select("id,amount,cost_type,category")
         .eq("event_id", eventId);
 
         if (expensesData) {
         setExpenses(
-            expensesData.map((expense) => ({
+          expensesData.map((expense) => ({
             id: expense.id,
             amount: Number(expense.amount),
             cost_type: expense.cost_type,
-            }))
+            category: expense.category,
+          }))
         );
     }
   }
@@ -121,6 +130,36 @@ export default function EventDetailsPage() {
     const averageOrder =
     orders.length > 0 ? revenue / orders.length : 0;
 
+    const allItems = orders.flatMap((order) => order.order_items);
+
+    const itemsSold = allItems.reduce(
+      (sum, item) => sum + item.quantity,
+      0
+    );
+
+    const productSales: Record<string, number> = {};
+
+    allItems.forEach((item) => {
+      productSales[item.product_name] =
+        (productSales[item.product_name] || 0) + item.quantity;
+    });
+
+    const bestSeller =
+      Object.entries(productSales).sort((a, b) => b[1] - a[1])[0];
+    const paymentBreakdown: Record<string, number> = {};
+
+    orders.forEach((order) => {
+      paymentBreakdown[order.payment_method] =
+        (paymentBreakdown[order.payment_method] || 0) + order.total;
+    });
+
+    const expenseBreakdown: Record<string, number> = {};
+
+    expenses.forEach((expense) => {
+      expenseBreakdown[expense.category] =
+        (expenseBreakdown[expense.category] || 0) + expense.amount;
+    });
+
   if (checkingAuth) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -142,7 +181,7 @@ export default function EventDetailsPage() {
         {event?.end_date || "No end date"}
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="border p-4 rounded-xl">
             <p className="text-gray-400 text-sm">Revenue</p>
             <p className="text-2xl font-bold">
@@ -177,13 +216,70 @@ export default function EventDetailsPage() {
             RM {averageOrder.toFixed(2)}
             </p>
         </div>
+        <div className="border p-4 rounded-xl">
+          <p className="text-gray-400 text-sm">Items Sold</p>
+          <p className="text-2xl font-bold">
+            {itemsSold}
+          </p>
+        </div>
+
+        <div className="border p-4 rounded-xl">
+          <p className="text-gray-400 text-sm">Best Seller</p>
+          <p className="text-2xl font-bold">
+            {bestSeller ? `${bestSeller[0]} (${bestSeller[1]})` : "No Sales"}
+          </p>
+        </div>
       </div>
       <div className="mt-6 border p-6 rounded-2xl">
         <h2 className="text-2xl font-bold mb-4">
-            Event Overview
+          Event Overview
         </h2>
 
-        <p>Total Orders: {orders.length}</p>
+        <p className="mb-4">
+          Total Orders: {orders.length}
+        </p>
+
+        <h3 className="text-xl font-semibold mb-3">
+          Payment Breakdown
+        </h3>
+
+                <div className="space-y-2">
+          {Object.entries(paymentBreakdown).map(
+            ([method, amount]) => (
+              <div
+                key={method}
+                className="flex justify-between border-b pb-2"
+              >
+                <span>{method}</span>
+
+                <span>
+                  RM {amount.toFixed(2)}
+                </span>
+              </div>
+            )
+          )}
+        </div>
+
+        <h3 className="text-xl font-semibold mt-6 mb-3">
+          Expense Breakdown
+        </h3>
+
+        <div className="space-y-2">
+          {Object.entries(expenseBreakdown).map(
+            ([category, amount]) => (
+              <div
+                key={category}
+                className="flex justify-between border-b pb-2"
+              >
+                <span>{category}</span>
+
+                <span>
+                  RM {amount.toFixed(2)}
+                </span>
+              </div>
+            )
+          )}
+        </div>
       </div>
     </main>
   );

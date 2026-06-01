@@ -14,6 +14,8 @@ type RawMaterial = {
   id: number;
   name: string;
   unit: string;
+  purchase_cost: number;
+  purchase_quantity: number;
 };
 
 type Recipe = {
@@ -75,10 +77,20 @@ export default function RecipesPage() {
   async function loadRawMaterials() {
     const { data } = await supabase
       .from("raw_materials")
-      .select("id,name,unit")
+      .select("id,name,unit,purchase_cost,purchase_quantity")
       .order("id", { ascending: true });
 
-    if (data) setRawMaterials(data);
+    if (data) {
+      setRawMaterials(
+        data.map((material) => ({
+          id: material.id,
+          name: material.name,
+          unit: material.unit,
+          purchase_cost: Number(material.purchase_cost || 0),
+          purchase_quantity: Number(material.purchase_quantity || 0),
+        }))
+      );
+    }
   }
 
   async function loadRecipes() {
@@ -182,6 +194,33 @@ export default function RecipesPage() {
     return rawMaterials.find((material) => material.id === materialId)?.unit || "";
   }
 
+  function getRecipeItemCost(recipe: Recipe) {
+    const material = rawMaterials.find(
+      (item) => item.id === recipe.raw_material_id
+    );
+
+    if (!material || material.purchase_quantity <= 0) {
+      return 0;
+    }
+
+    const unitCost =
+      material.purchase_cost / material.purchase_quantity;
+
+    return unitCost * recipe.quantity_used;
+  }
+
+  function getProductRecipeCost(productId: number) {
+    return recipes
+      .filter(
+        (recipe) =>
+          recipe.product_id === productId &&
+          !recipe.is_optional
+      )
+      .reduce(
+        (sum, recipe) => sum + getRecipeItemCost(recipe),
+        0
+      );
+  }
   if (checkingAuth) {
     return (
       <main className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -195,6 +234,26 @@ export default function RecipesPage() {
       <Navbar />
 
       <h1 className="text-4xl font-bold mb-6">Recipes</h1>
+
+      <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {products.map((product) => {
+          const recipeCost = getProductRecipeCost(product.id);
+
+          return (
+            <div key={product.id} className="border p-4 rounded-xl">
+              <p className="text-gray-400">Product</p>
+
+              <h2 className="text-2xl font-bold">
+                {product.name}
+              </h2>
+
+              <p className="mt-3 text-green-400">
+                Recipe Cost: RM {recipeCost.toFixed(2)}
+              </p>
+            </div>
+          );
+        })}
+      </div>
 
       <div className="border p-6 rounded-2xl">
         <h2 className="text-2xl font-bold">
@@ -276,6 +335,10 @@ export default function RecipesPage() {
             <p className="text-gray-400">
               Uses {recipe.quantity_used} {getMaterialUnit(recipe.raw_material_id)}{" "}
               {getMaterialName(recipe.raw_material_id)}
+            </p>
+
+            <p className="text-green-400">
+              Cost: RM {getRecipeItemCost(recipe).toFixed(2)}
             </p>
 
             {recipe.is_optional && (
