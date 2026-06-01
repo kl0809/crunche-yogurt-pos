@@ -32,6 +32,18 @@ type Expense = {
   category: string;
 };
 
+type SamplingLog = {
+  id: number;
+  raw_material_id: number;
+  quantity_used: number;
+};
+
+type RawMaterial = {
+  id: number;
+  purchase_cost: number;
+  purchase_quantity: number;
+};
+
 export default function EventDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -41,6 +53,8 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<Event | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [samplingLogs, setSamplingLogs] = useState<SamplingLog[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
 
   useEffect(() => {
     checkUser();
@@ -91,9 +105,9 @@ export default function EventDetailsPage() {
         }
 
         const { data: expensesData } = await supabase
-        .from("expenses")
-        .select("id,amount,cost_type,category")
-        .eq("event_id", eventId);
+          .from("expenses")
+          .select("id,amount,cost_type,category")
+          .eq("event_id", eventId);
 
         if (expensesData) {
         setExpenses(
@@ -104,6 +118,33 @@ export default function EventDetailsPage() {
             category: expense.category,
           }))
         );
+    }
+    const { data: samplingData } = await supabase
+      .from("sampling_logs")
+      .select("id,raw_material_id,quantity_used")
+      .eq("event_id", eventId);
+
+    if (samplingData) {
+      setSamplingLogs(
+        samplingData.map((log) => ({
+          id: log.id,
+          raw_material_id: log.raw_material_id,
+          quantity_used: Number(log.quantity_used),
+        }))
+      );
+    }
+    const { data: rawMaterialsData } = await supabase
+      .from("raw_materials")
+      .select("id,purchase_cost,purchase_quantity");
+
+    if (rawMaterialsData) {
+      setRawMaterials(
+        rawMaterialsData.map((material) => ({
+          id: material.id,
+          purchase_cost: Number(material.purchase_cost || 0),
+          purchase_quantity: Number(material.purchase_quantity || 0),
+        }))
+      );
     }
   }
   const revenue = orders.reduce(
@@ -120,15 +161,36 @@ export default function EventDetailsPage() {
     .filter((expense) => expense.cost_type === "Consumable")
     .reduce((sum, expense) => sum + expense.amount, 0);
 
-    const netProfit = grossProfit - consumableExpenses;
-
-    const roi =
-    consumableExpenses > 0
-        ? (netProfit / consumableExpenses) * 100
-        : 0;
-
     const averageOrder =
     orders.length > 0 ? revenue / orders.length : 0;
+
+    function getSamplingItemCost(log: SamplingLog) {
+    const material = rawMaterials.find(
+      (item) => item.id === log.raw_material_id
+    );
+
+    if (!material || material.purchase_quantity <= 0) {
+      return 0;
+    }
+
+    const unitCost =
+      material.purchase_cost / material.purchase_quantity;
+
+    return unitCost * log.quantity_used;
+  }
+
+  const samplingCost = samplingLogs.reduce(
+    (sum, log) => sum + getSamplingItemCost(log),
+    0
+  );
+
+    const netProfit =
+      grossProfit - consumableExpenses - samplingCost;
+
+    const roi =
+      consumableExpenses > 0
+        ? (netProfit / consumableExpenses) * 100
+        : 0;
 
     const allItems = orders.flatMap((order) => order.order_items);
 
@@ -197,6 +259,16 @@ export default function EventDetailsPage() {
         </div>
 
         <div className="border p-4 rounded-xl">
+          <p className="text-gray-400 text-sm">
+            Sampling Cost
+          </p>
+
+          <p className="text-2xl font-bold">
+            RM {samplingCost.toFixed(2)}
+          </p>
+        </div>
+
+        <div className="border p-4 rounded-xl">
             <p className="text-gray-400 text-sm">Net Profit</p>
             <p className="text-2xl font-bold">
             RM {netProfit.toFixed(2)}
@@ -237,6 +309,10 @@ export default function EventDetailsPage() {
 
         <p className="mb-4">
           Total Orders: {orders.length}
+        </p>
+
+        <p className="mb-4">
+          Total Sampling Cost: RM {samplingCost.toFixed(2)}
         </p>
 
         <h3 className="text-xl font-semibold mb-3">
