@@ -49,6 +49,13 @@ export default function Navbar() {
       >
         Events
       </Link>
+
+      <Link
+        href="/sampling"
+        className="bg-white text-black px-4 py-2 rounded-xl"
+      >
+        Sampling
+      </Link>
     </nav>
   );
 }
