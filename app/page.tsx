@@ -75,6 +75,7 @@ export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
   const [selectedEventId, setSelectedEventId] = useState("overall");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Cash");
   const [smallBagQuantity, setSmallBagQuantity] = useState(0);
@@ -159,6 +160,24 @@ export default function Home() {
     const { data: recipesData } = await supabase
       .from("recipes")
       .select("id,product_id,raw_material_id,quantity_used,is_optional");
+
+    const { data: rawMaterialsData } = await supabase
+      .from("raw_materials")
+      .select("id,name,stock_quantity,unit,low_stock_alert,purchase_cost,purchase_quantity");
+
+    if (rawMaterialsData) {
+      setRawMaterials(
+        rawMaterialsData.map((material) => ({
+          id: material.id,
+          name: material.name,
+          stock_quantity: Number(material.stock_quantity),
+          unit: material.unit,
+          low_stock_alert: Number(material.low_stock_alert),
+          purchase_cost: Number(material.purchase_cost || 0),
+          purchase_quantity: Number(material.purchase_quantity || 0),
+        }))
+      );
+    }  
 
     if (recipesData) {
       setRecipes(
@@ -281,9 +300,37 @@ export default function Home() {
 
     const averageOrderValue =
       totalOrders > 0 ? todaySales / totalOrders : 0;
-  function formatMoney(amount: number) {
-    return amount.toFixed(2);
-  }
+    function formatMoney(amount: number) {
+      return amount.toFixed(2);
+    }
+
+    function getRecipeItemCost(recipe: Recipe) {
+      const material = rawMaterials.find(
+        (item) => item.id === recipe.raw_material_id
+      );
+
+      if (!material || material.purchase_quantity <= 0) {
+        return 0;
+      }
+
+      const unitCost =
+        material.purchase_cost / material.purchase_quantity;
+
+      return unitCost * recipe.quantity_used;
+    }
+
+    function getProductRecipeCost(productId: number) {
+      return recipes
+        .filter(
+          (recipe) =>
+            recipe.product_id === productId &&
+            !recipe.is_optional
+        )
+        .reduce(
+          (sum, recipe) => sum + getRecipeItemCost(recipe),
+          0
+        );
+    }
 
   const productSales: Record<string, number> = {};
 
@@ -304,10 +351,11 @@ export default function Home() {
     0
   );
 
-  const profit = cart.reduce(
-    (sum, item) => sum + (item.price - item.cost) * item.quantity,
-    0
-  );
+  const profit = cart.reduce((sum, item) => {
+    const recipeCost = getProductRecipeCost(item.id);
+
+    return sum + (item.price - recipeCost) * item.quantity;
+  }, 0);
 
   function addToCart(product: (typeof products)[0]) {
     const existingItem = cart.find((item) => item.id === product.id);
@@ -325,6 +373,7 @@ export default function Home() {
         ...cart,
         {
           ...product,
+          cost: getProductRecipeCost(product.id),
           quantity: 1,
         },
       ]);
@@ -637,8 +686,8 @@ export default function Home() {
           </div>
         ))}
 
-        <h3 className="mt-6 text-3xl font-bold">Total: RM {total}</h3>
-        <h3 className="mt-2 text-2xl font-bold">Profit: RM {profit}</h3>
+        <h3 className="mt-6 text-3xl font-bold">Total: RM {total.toFixed(2)}</h3>
+        <h3 className="mt-2 text-2xl font-bold">Profit: RM {profit.toFixed(2)}</h3>
 
         <div className="mt-6 border p-4 rounded-xl">
           <p className="mb-3 font-semibold">Bag Usage</p>

@@ -12,8 +12,24 @@ type Product = {
   cost: number;
 };
 
+type RawMaterial = {
+  id: number;
+  purchase_cost: number;
+  purchase_quantity: number;
+};
+
+type Recipe = {
+  id: number;
+  product_id: number;
+  raw_material_id: number;
+  quantity_used: number;
+  is_optional: boolean;
+};
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productCost, setProductCost] = useState("");
@@ -26,9 +42,11 @@ export default function ProductsPage() {
     }, []);
 
     useEffect(() => {
-    if (!checkingAuth) {
+      if (!checkingAuth) {
         loadProducts();
-    }
+        loadRawMaterials();
+        loadRecipes();
+      }
     }, [checkingAuth]);
 
   async function checkUser() {
@@ -55,6 +73,40 @@ export default function ProductsPage() {
           name: product.name,
           price: Number(product.price),
           cost: Number(product.cost),
+        }))
+      );
+    }
+  }
+
+  async function loadRawMaterials() {
+    const { data } = await supabase
+      .from("raw_materials")
+      .select("id,purchase_cost,purchase_quantity");
+
+    if (data) {
+      setRawMaterials(
+        data.map((material) => ({
+          id: material.id,
+          purchase_cost: Number(material.purchase_cost || 0),
+          purchase_quantity: Number(material.purchase_quantity || 0),
+        }))
+      );
+    }
+  }
+
+  async function loadRecipes() {
+    const { data } = await supabase
+      .from("recipes")
+      .select("id,product_id,raw_material_id,quantity_used,is_optional");
+
+    if (data) {
+      setRecipes(
+        data.map((recipe) => ({
+          id: recipe.id,
+          product_id: recipe.product_id,
+          raw_material_id: recipe.raw_material_id,
+          quantity_used: Number(recipe.quantity_used),
+          is_optional: Boolean(recipe.is_optional),
         }))
       );
     }
@@ -116,6 +168,34 @@ export default function ProductsPage() {
     await loadProducts();
   }
 
+  function getRecipeItemCost(recipe: Recipe) {
+    const material = rawMaterials.find(
+      (item) => item.id === recipe.raw_material_id
+    );
+
+    if (!material || material.purchase_quantity <= 0) {
+      return 0;
+    }
+
+    const unitCost =
+      material.purchase_cost / material.purchase_quantity;
+
+    return unitCost * recipe.quantity_used;
+  }
+
+  function getProductRecipeCost(productId: number) {
+    return recipes
+      .filter(
+        (recipe) =>
+          recipe.product_id === productId &&
+          !recipe.is_optional
+      )
+      .reduce(
+        (sum, recipe) => sum + getRecipeItemCost(recipe),
+        0
+      );
+  }
+
   function startEditProduct(product: Product) {
     setEditingProductId(product.id);
     setProductName(product.name);
@@ -175,8 +255,14 @@ export default function ProductsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {products.map((product) => (
-          <div key={product.id} className="border p-4 rounded-2xl">
+        {products.map((product) => {
+          const recipeCost = getProductRecipeCost(product.id);
+          const profit = product.price - recipeCost;
+          const margin =
+            product.price > 0 ? (profit / product.price) * 100 : 0;
+
+          return (
+            <div key={product.id} className="border p-4 rounded-2xl">
             <h2 className="text-2xl font-semibold">{product.name}</h2>
 
             <p className="mt-2 text-gray-400">
@@ -184,7 +270,19 @@ export default function ProductsPage() {
             </p>
 
             <p className="text-gray-400">
-              Cost: RM {product.cost}
+              Manual Cost: RM {product.cost}
+            </p>
+
+            <p className="text-green-400">
+              Recipe Cost: RM {recipeCost.toFixed(2)}
+            </p>
+
+            <p className="text-gray-400">
+              Auto Profit: RM {profit.toFixed(2)}
+            </p>
+
+            <p className="text-gray-400">
+              Margin: {margin.toFixed(1)}%
             </p>
 
             <div className="flex gap-2 mt-4">
@@ -203,7 +301,7 @@ export default function ProductsPage() {
               </button>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </main>
   );
