@@ -9,7 +9,6 @@ type Product = {
   id: number;
   name: string;
   price: number;
-  cost: number;
 };
 
 type RawMaterial = {
@@ -32,7 +31,6 @@ export default function ProductsPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [productCost, setProductCost] = useState("");
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -72,7 +70,6 @@ export default function ProductsPage() {
           id: product.id,
           name: product.name,
           price: Number(product.price),
-          cost: Number(product.cost),
         }))
       );
     }
@@ -114,9 +111,7 @@ export default function ProductsPage() {
 
   async function addProduct() {
     const price = Number(productPrice);
-    const cost = Number(productCost);
-
-    if (!productName || price <= 0 || cost < 0) return;
+    if (!productName || price <= 0) return;
 
     const { error } = editingProductId
       ? await supabase
@@ -124,14 +119,12 @@ export default function ProductsPage() {
           .update({
             name: productName,
             price,
-            cost,
           })
           .eq("id", editingProductId)
       : await supabase.from("products").insert([
           {
             name: productName,
             price,
-            cost,
           },
         ]);
 
@@ -142,7 +135,6 @@ export default function ProductsPage() {
 
     setProductName("");
     setProductPrice("");
-    setProductCost("");
     setEditingProductId(null);
 
     await loadProducts();
@@ -200,7 +192,6 @@ export default function ProductsPage() {
     setEditingProductId(product.id);
     setProductName(product.name);
     setProductPrice(String(product.price));
-    setProductCost(String(product.cost));
   }
   
     if (checkingAuth) {
@@ -237,14 +228,6 @@ export default function ProductsPage() {
             className="bg-white text-black px-4 py-2 rounded-xl"
           />
 
-          <input
-            value={productCost}
-            onChange={(e) => setProductCost(e.target.value)}
-            placeholder="Cost"
-            type="number"
-            className="bg-white text-black px-4 py-2 rounded-xl"
-          />
-
           <button
             onClick={addProduct}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
@@ -267,10 +250,6 @@ export default function ProductsPage() {
 
             <p className="mt-2 text-gray-400">
               Price: RM {product.price}
-            </p>
-
-            <p className="text-gray-400">
-              Manual Cost: RM {product.cost}
             </p>
 
             <p className="text-green-400">
