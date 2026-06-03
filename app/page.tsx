@@ -467,6 +467,22 @@ export default function Home() {
         if (updateError) {
           console.error(updateError);
         }
+
+        const { error: logError } = await supabase
+          .from("inventory_logs")
+          .insert([
+            {
+              material_id: recipe.raw_material_id,
+              change_amount: -quantityToDeduct,
+              log_type: "ORDER",
+              reference_id: orderData.id,
+              note: `Order #${orderData.id}`,
+            },
+          ]);
+
+        if (logError) {
+          console.error(logError);
+        }
       }
     }
 
@@ -501,6 +517,21 @@ export default function Home() {
 
       if (updateError) {
         console.error(updateError);
+      }
+      const { error: logError } = await supabase
+        .from("inventory_logs")
+        .insert([
+          {
+            material_id: materialData.id,
+            change_amount: -bag.quantity,
+            log_type: "ORDER_BAG",
+            reference_id: orderData.id,
+            note: `Order #${orderData.id} - ${bag.name}`,
+          },
+        ]);
+
+      if (logError) {
+        console.error(logError);
       }
     }
 

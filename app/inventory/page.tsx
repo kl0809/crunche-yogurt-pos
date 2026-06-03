@@ -94,6 +94,22 @@ export default function InventoryPage() {
       return;
     }
 
+    const { error: logError } = await supabase
+      .from("inventory_logs")
+      .insert([
+        {
+          material_id: materialId,
+          change_amount: amount,
+          log_type: "ADD_STOCK",
+          reference_id: null,
+          note: "Add stock from Inventory page",
+        },
+      ]);
+
+    if (logError) {
+      console.error(logError);
+    }
+
     setSelectedMaterialId("");
     setStockAmount("");
 

@@ -56,6 +56,13 @@ export default function Navbar() {
       >
         Sampling
       </Link>
+
+      <Link
+        href="/inventory-logs"
+        className="bg-white text-black px-4 py-2 rounded-xl"
+      >
+        Inventory Logs
+      </Link>
     </nav>
   );
 }

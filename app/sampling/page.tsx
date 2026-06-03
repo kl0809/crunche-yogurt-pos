@@ -56,16 +56,18 @@ export default function SamplingPage() {
             return;
         }
 
-        const { error } = await supabase
+        const { data: samplingData, error } = await supabase
             .from("sampling_logs")
             .insert([
-            {
+                {
                 event_id: eventId,
                 raw_material_id: materialId,
                 quantity_used: quantity,
                 note,
-            },
-            ]);
+                },
+            ])
+            .select()
+            .single();
 
         if (error) {
             console.error(error);
@@ -92,6 +94,22 @@ export default function SamplingPage() {
             console.error(stockError);
             return;
         }
+
+        const { error: logError } = await supabase
+            .from("inventory_logs")
+            .insert([
+                {
+                material_id: materialId,
+                change_amount: -quantity,
+                log_type: "SAMPLING",
+                reference_id: samplingData.id,
+                note: note || "Sampling usage",
+                },
+            ]);
+
+            if (logError) {
+            console.error(logError);
+            }
 
         alert("Sampling saved!");
 
@@ -138,6 +156,22 @@ export default function SamplingPage() {
     if (error) {
         console.error(error);
         return;
+    }
+
+    const { error: logError } = await supabase
+        .from("inventory_logs")
+        .insert([
+            {
+                material_id: log.raw_material_id,
+                change_amount: Number(log.quantity_used),
+                log_type: "SAMPLING_DELETE",
+                reference_id: log.id,
+                note: "Sampling deleted, inventory restored",
+            },
+        ]);
+
+    if (logError) {
+        console.error(logError);
     }
 
         await loadData();
