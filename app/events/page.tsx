@@ -13,6 +13,7 @@ type Event = {
 
   revenue?: number;
   expenses?: number;
+  samplingCost?: number;
   netProfit?: number;
   orderCount?: number;
   roi?: number;
@@ -75,6 +76,15 @@ export default function EventsPage() {
             .select("amount,cost_type")
             .eq("event_id", event.id);
 
+            const { data: samplingLogs } = await supabase
+            .from("sampling_logs")
+            .select("raw_material_id,quantity_used")
+            .eq("event_id", event.id);
+
+            const { data: rawMaterials } = await supabase
+            .from("raw_materials")
+            .select("id,purchase_cost,purchase_quantity");
+
             const revenue =
             orders?.reduce(
                 (sum, order) => sum + Number(order.total),
@@ -99,6 +109,23 @@ export default function EventsPage() {
                 0
                 ) || 0;
 
+            const samplingCost =
+            samplingLogs?.reduce((sum, log) => {
+                const material = rawMaterials?.find(
+                (item) => item.id === log.raw_material_id
+                );
+
+                if (!material || Number(material.purchase_quantity) <= 0) {
+                return sum;
+                }
+
+                const unitCost =
+                Number(material.purchase_cost) /
+                Number(material.purchase_quantity);
+
+                return sum + unitCost * Number(log.quantity_used);
+            }, 0) || 0;
+
             const eventOrderIds =
                 orders?.map((order) => order.id) || [];
 
@@ -119,7 +146,7 @@ export default function EventsPage() {
 
                 const roi =
                 consumableExpenses > 0
-                    ? ((grossProfit - consumableExpenses) /
+                    ? ((grossProfit - consumableExpenses - samplingCost) /
                         consumableExpenses) *
                     100
                     : 0;
@@ -141,7 +168,8 @@ export default function EventsPage() {
                 ...event,
                 revenue,
                 expenses: consumableExpenses,
-                netProfit: grossProfit - consumableExpenses,
+                samplingCost,
+                netProfit: grossProfit - consumableExpenses - samplingCost,
                 orderCount: orders?.length || 0,
                 roi,
                 itemsSold,
@@ -302,6 +330,13 @@ export default function EventsPage() {
                     <p className="text-gray-400 text-sm">Expenses</p>
                     <p className="text-xl font-bold">
                     RM {(event.expenses || 0).toFixed(2)}
+                    </p>
+                </div>
+
+                <div className="border p-3 rounded-xl">
+                    <p className="text-gray-400 text-sm">Sampling Cost</p>
+                    <p className="text-xl font-bold">
+                    RM {(event.samplingCost || 0).toFixed(2)}
                     </p>
                 </div>
 
