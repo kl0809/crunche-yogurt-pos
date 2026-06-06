@@ -23,6 +23,8 @@ type RawMaterial = {
 export default function InventoryLogsPage() {
   const [logs, setLogs] = useState<InventoryLog[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
+  const [filterType, setFilterType] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     loadData();
@@ -78,6 +80,22 @@ export default function InventoryLogsPage() {
     return new Date(date).toLocaleString();
   }
 
+  const filteredLogs = logs.filter((log) => {
+    const matchesType =
+      filterType === "ALL" ||
+      log.log_type === filterType;
+
+    const materialName =
+      getMaterialName(log.material_id).toLowerCase();
+
+    const matchesSearch =
+      materialName.includes(
+        searchTerm.toLowerCase()
+      );
+
+    return matchesType && matchesSearch;
+  });
+
   return (
     <main className="min-h-screen bg-black text-white p-10">
       <Navbar />
@@ -86,14 +104,41 @@ export default function InventoryLogsPage() {
         Inventory Logs
       </h1>
 
-      {logs.length === 0 && (
+      <div className="mb-6">
+        <p className="mb-2 font-semibold">Filter by Type</p>
+
+        <select
+          value={filterType}
+          onChange={(e) => setFilterType(e.target.value)}
+          className="bg-white text-black px-4 py-2 rounded-xl"
+        >
+          <option value="ALL">All</option>
+          <option value="ORDER">Order</option>
+          <option value="ORDER_BAG">Order Bag</option>
+          <option value="ORDER_VOID">Order Void</option>
+          <option value="ADD_STOCK">Add Stock</option>
+          <option value="SAMPLING">Sampling</option>
+          <option value="SAMPLING_DELETE">Sampling Delete</option>
+        </select>
+      </div>
+
+      <div className="mt-4 mb-6">
+        <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search material..."
+          className="bg-white text-black px-4 py-2 rounded-xl w-full md:w-80"
+        />
+      </div>
+
+      {filteredLogs.length === 0 && (
         <p className="text-gray-400">
           No inventory logs yet.
         </p>
       )}
 
       <div className="space-y-4">
-        {logs.map((log) => (
+        {filteredLogs.map((log) => (
           <div key={log.id} className="border p-4 rounded-xl">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
               <div>
